@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Coin Chart — 7 Days</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0f1620;         /* nền trang */
+      --card:#101823;       /* nền khung chart */
+      --grid:#1f2a38;       /* màu lưới */
+      --text:#c9d4e5;       /* chữ chính */
+      --muted:#7e8ca3;      /* chữ phụ */
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1100px;margin:0 auto;padding:18px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    h1{font-size:18px;font-weight:600;margin:0}
+    .panel{background:var(--card);border:1px solid #1a2431;border-radius:14px;padding:14px}
+    .meta{color:var(--muted);margin:8px 2px 12px}
+    #chartWrap{height:62vh}
+
+    *{box-sizing:border-box}
+
+    /* Bố cục chính */
+    .coin-info{
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+    /* Tiêu đề */
+    h2 {
+      color: var(--primary-color);
+      margin-bottom: 10px;
+    }
+
+    /* Các chi tiết của coin */
+    .coin-details {
+      margin-top: 10px;
+    }
+
+    .coin-detail {
+      margin-bottom: 12px;
+    }
+
+    .coin-detail strong {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+   <div class="container">
+    <div class="coin-info">
+      <div id="title"></div>
+      <div id="subtitle"></div>
+      <div class="coin-details">
+        <div class="coin-detail">
+          <strong>Price: </strong><span id="price">$--</span>
+        </div>
+        <div class="coin-detail">
+          <strong>Market Cap: </strong><span id="market-cap">$--</span>
+        </div>
+        <div class="coin-detail">
+          <strong>Volume change (24h): </strong><span id="volume-change-24h">$--</span>
+        </div>
+        <div class="coin-detail">
+          <strong>Circulating Supply: </strong><span id="circulating-supply">--</span>
+        </div>
+        <div class="coin-detail">
+          <strong>Total Supply: </strong><span id="total-supply">--</span>
+        </div>
+        <div class="coin-detail">
+          <strong>FDV: </strong><span id="fdv">--</span>
+        </div>
+        <div class="coin-detail">
+          <strong>Max Supply: </strong><span id="max-supply">--</span>
+        </div>
+    </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="panel">
+      <div class="meta" id="subtitle">Fetching data…</div>
+      <div id="chartWrap">
+        <canvas id="coinChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+
+  <!-- logic -->
+  <script src="chart.js"></script>
+</body>
+</html>
+ 
