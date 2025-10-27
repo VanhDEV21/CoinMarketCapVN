@@ -134,3 +134,167 @@ td.gray::after {
   font-weight: bold;
   border-color: #007bff;
 }
+
+/* ====================== ADD BELOW ====================== */
+
+/* Header (tiêu đề + Login/Logout) */
+.header {
+  display:flex; justify-content:space-between; align-items:center; gap:12px;
+  margin-bottom: 10px;
+}
+.header .auth-actions button {
+  background:#232a3e; border:1px solid #333; color:#e8eef8;
+  padding:8px 12px; border-radius:8px; cursor:pointer; transition:.2s;
+}
+.header .auth-actions button:hover { background:#2c3551; border-color:#3b4666; }
+
+/* Hint yêu cầu đăng nhập (401) */
+#login-hint {
+  display:none; margin:10px 0 6px; padding:10px 12px;
+  border:1px dashed #444; border-radius:8px; color:#ffce7a; background:#1a1a1a;
+}
+
+/* Watchlist star */
+.watch-btn {
+  margin-right: 6px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  vertical-align: middle;
+  transition: transform .08s, color .2s;
+}
+.watch-btn:hover { transform: translateY(-1px); color:#bbb; }
+.watch-btn.on   { color: gold; text-shadow: 0 0 8px rgba(255,215,0,.25); }
+.watch-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+.tabs{display:flex;gap:8px;align-items:center;margin-top:6px}
+.tab{
+  background:#1e1e1e;border:1px solid #333;color:#eaeaea;
+  padding:6px 12px;border-radius:8px;cursor:pointer;transition:.15s;
+}
+.tab:hover{background:#2b2b2b}
+.tab.active{background:#007bff;border-color:#007bff;color:#fff;font-weight:600}
+.empty-hint{
+  text-align:center;color:#bbb;padding:18px 0
+}
+
+
+/* Header cột sort (5m/1h/24h) cho dễ thấy là có thể click */
+th#th-5m, th#th-1h, th#th-24h { cursor: pointer; user-select: none; }
+th#th-5m:hover, th#th-1h:hover, th#th-24h:hover { background-color:#3a3a3a; }
+
+/* Auth pages (login/register) — tông tối, khớp theme bảng */
+.auth-wrap{
+  min-height:100vh; display:grid; place-items:center; padding:40px 16px;
+  background: transparent;
+}
+.auth-title{ margin:0 0 6px; font-size:24px; }
+.auth-sub{ margin:0 0 16px; color:#b7b7b7; font-size:14px; }
+
+
+/* Phân trang: giữ style cũ nhưng gọn spacing khi nhiều trang */
+#pagination button { min-width: 34px; }
+/* ========= AUTH PAGES (login/register) ========= */
+:root{
+  --auth-card-bg:#1b1d25;
+  --auth-card-border:#2a2e3b;
+  --auth-shadow:0 8px 25px rgba(0,0,0,.35);
+  --auth-input-bg:#10131b;
+  --auth-input-border:#2e3242;
+  --auth-input-ring:#4f83ff;
+  --auth-hint:#a3acc2;
+  --auth-btn:#3a7bfd;
+  --auth-btn-hover:#2f69da;
+}
+
+/* bố cục giữa màn hình */
+.auth-wrap{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  padding:40px 16px;
+}
+
+/* thẻ card */
+.auth-card{
+  width:min(480px, 92vw);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 30%), var(--auth-card-bg);
+  border:1px solid var(--auth-card-border);
+  border-radius:14px;
+  padding:32px 36px;
+  box-shadow: var(--auth-shadow);
+}
+
+/* tiêu đề & mô tả */
+.auth-title{ margin:0 0 8px; font-size:26px; letter-spacing:.2px }
+.auth-sub{ margin:0 0 20px; color:var(--auth-hint); font-size:15px }
+
+/* input */
+.auth-form .input{
+  width:100%;
+  box-sizing:border-box;
+  padding:13px 14px;
+  margin-bottom:16px;
+  border-radius:10px;
+  background:var(--auth-input-bg);
+  border:1px solid var(--auth-input-border);
+  color:#e9ecf5;
+  font-size:15px;
+  outline:none;
+  transition:border-color .15s, box-shadow .15s, background .15s;
+}
+.auth-form .input::placeholder{ color:#7f8696 }
+.auth-form .input:focus{
+  border-color:var(--auth-input-ring);
+  box-shadow:0 0 0 2px rgba(79,131,255,.25);
+  background:#0d1118;
+}
+
+/* field có nút 👁/🙈 */
+.pw-field{ position:relative; }
+.pw-field .input{ padding-right:44px; }
+.pw-toggle{
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  border:none; background:transparent; color:#9aa4b2; cursor:pointer;
+  font-size:16px; line-height:1; padding:4px; border-radius:6px; 
+  transition:color .15s, background .15s;
+}
+.pw-toggle:hover{ color:#c9d2e3; background:#1f2431; }
+
+/* trạng thái lỗi */
+.input.error{ border-color:#f44336 !important; box-shadow:0 0 0 2px rgba(244,67,54,.2); }
+
+/* nút submit */
+.auth-form .btn{
+  width:100%;
+  padding:12px 14px;
+  margin-top:6px;
+  border:none;
+  border-radius:10px;
+  background:var(--auth-btn);
+  color:#fff; font-weight:600; letter-spacing:.1px;
+  cursor:pointer;
+  transition:background .15s, transform .06s, box-shadow .15s;
+  box-shadow:0 6px 18px rgba(58,123,253,.28);
+}
+.auth-form .btn:hover{ background:var(--auth-btn-hover); }
+.auth-form .btn:active{ transform:translateY(1px); box-shadow:0 4px 12px rgba(58,123,253,.22); }
+
+/* message nhỏ dưới nút */
+.msg{ margin-top:10px; min-height:1.2em; font-size:13px; color:#ffd48a; }
+
+/* chân form */
+.auth-footer{ margin-top:18px; color:var(--auth-hint); font-size:14px; text-align:center; }
+.auth-footer a{ color:#8ab4f8; text-decoration:none; }
+.auth-footer a:hover{ text-decoration:underline; }
+
+/* responsive */
+@media (max-width:420px){
+  .auth-card{ padding:28px 18px; }
+}
+
+
+

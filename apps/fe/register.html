@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Register</title>
+
+  <!-- CSS chính của bạn -->
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- (nhỏ) style cho nút 👁 -->
+  <style>
+    .pw-field { position: relative; }
+    .pw-field .input { padding-right: 44px; }
+    .pw-toggle{
+      position:absolute; right:10px; top:50%; transform:translateY(-50%);
+      border:none; background:transparent; color:#9aa4b2; cursor:pointer;
+      font-size:16px; line-height:1; padding:4px; border-radius:6px;
+    }
+    .pw-toggle:hover{ color:#c9d2e3; background:#1f2431; }
+    .input.error { border-color:#f44336 !important; box-shadow:0 0 0 2px rgba(244,67,54,.2); }
+  </style>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h2 class="auth-title">Create account</h2>
+      <p class="auth-sub">Join to save your Watchlist &amp; preferences.</p>
+
+      <form id="reg-form" class="auth-form">
+        <input type="text" id="name" class="input" placeholder="Name (optional)" />
+
+        <input type="email" id="email" class="input" placeholder="Email" required />
+
+        <!-- Password -->
+        <div class="pw-field">
+          <input type="password" id="password" class="input" placeholder="Password (min 6 chars)" required />
+          <button type="button" class="pw-toggle" aria-label="Show password" data-target="password">👁</button>
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="pw-field">
+          <input type="password" id="confirm" class="input" placeholder="Confirm password" required />
+          <button type="button" class="pw-toggle" aria-label="Show password" data-target="confirm">👁</button>
+        </div>
+
+        <button type="submit" class="btn">Register</button>
+        <p id="reg-msg" class="msg"></p>
+      </form>
+
+      <div class="auth-footer">
+        Already have account? <a href="login.html">Login</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    const API = 'http://localhost:5000/api';
+
+    // Toggle show/hide password
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.pw-toggle');
+      if (!btn) return;
+      const id = btn.getAttribute('data-target');
+      const input = document.getElementById(id);
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.textContent = showing ? '👁' : '🙈';
+      btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+    });
+
+    // Validate & submit
+    document.getElementById('reg-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const pw = document.getElementById('password');
+      const cf = document.getElementById('confirm');
+      const msg = document.getElementById('reg-msg');
+
+      // reset trạng thái lỗi
+      [pw, cf].forEach(i => i.classList.remove('error'));
+      msg.textContent = '';
+
+      if (pw.value.length < 6) {
+        pw.classList.add('error');
+        msg.textContent = 'Password must be at least 6 characters.';
+        pw.focus();
+        return;
+      }
+      if (pw.value !== cf.value) {
+        cf.classList.add('error');
+        msg.textContent = 'Confirm password does not match.';
+        cf.focus();
+        return;
+      }
+
+      try {
+        msg.textContent = 'Registering…';
+        const res = await axios.post(`${API}/auth/register`, { name, email, password: pw.value });
+        localStorage.setItem('token', res.data.token);
+        msg.textContent = 'Success! Redirecting…';
+        setTimeout(() => location.href = 'index.html', 400);
+      } catch (err) {
+        msg.textContent = err?.response?.data?.message || 'Register failed';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .auth-card{max-width:420px;margin:8vh auto;padding:24px;border-radius:12px;background:#1e1e1e;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+    .auth-card h2{margin:0 0 16px}
+    .auth-card input{width:100%;padding:10px 12px;margin:8px 0;border-radius:8px;border:1px solid #333;background:#111;color:#eee}
+    .auth-card button{width:100%;padding:10px 12px;margin-top:12px;border:none;border-radius:8px;background:#3a7bfd;color:#fff;cursor:pointer}
+    .auth-card .msg{margin-top:8px;color:#ffb74d;min-height:1.1em}
+    .auth-card a{color:#8ab4f8}
+  </style>
+  <style> body{ font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; } </style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h2 class="auth-title">Welcome back</h2>
+    <p class="auth-sub">Login to manage your Watchlist.</p>
+
+    <form id="login-form" class="auth-form">
+      <input type="email"    id="email"    class="input" placeholder="Email" required>
+      <input type="password" id="password" class="input" placeholder="Password" required>
+      <button type="submit" class="btn">Login</button>
+      <p id="login-msg" class="msg"></p>
+    </form>
+
+    <div class="auth-footer">New here? <a href="register.html">Create an account</a></div>
+  </div>
+</div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    const API='http://localhost:5000/api';
+    const form=document.getElementById('login-form'); const msg=document.getElementById('login-msg');
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const email=document.getElementById('email').value.trim();
+      const password=document.getElementById('password').value;
+      msg.textContent='Logging in…';
+      try{
+        const res=await axios.post(`${API}/auth/login`,{email,password});
+        localStorage.setItem('token', res.data.token);
+        msg.textContent='Success! Redirecting…';
+        setTimeout(()=> location.href='index.html', 400);
+      }catch(err){
+        msg.textContent=err?.response?.data?.message || 'Login failed';
+      }
+    });
+  </script>
+</body>
+
+</html>

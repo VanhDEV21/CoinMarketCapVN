@@ -1,18 +1,22 @@
 import express, { Application } from 'express';
 import { connectToDatabase } from './config/ConnectDB';
 import coinRoutes from './routes/coinRoutes';
+import authRoutes from './routes/authRoute';
 import cors from 'cors';
 import axios from 'axios';
-
+import { maybeAuth } from './middlewares/maybeAuth';
+import watchlistRoutes from './routes/watchListRoute';
 const app: Application = express();
 
 app.use(express.json()); 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 
 connectToDatabase();
 
+app.use('/api/coins', maybeAuth, coinRoutes);
+app.use('/api/auth',  authRoutes); 
+app.use('/api/watchlist', watchlistRoutes);
 
-app.use('/api/coins', coinRoutes);
 
 async function fetchAndStoreCoins() {
   axios.get('http://localhost:5000/api/coins/fetch-and-store')

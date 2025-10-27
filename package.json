@@ -1,8 +1,11 @@
 {
   "dependencies": {
     "axios": "^1.12.2",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.1",
     "path": "^0.12.7",
     "socket.io": "^4.8.1",
@@ -18,11 +21,14 @@
     "build": "tsc",
     "start": "concurrently \"yarn be\" \"yarn fe\"",
     "be": "node dist/server.js",
-    "fe": "http-server . -p 8144"
+    "fe": "http-server . -p 8154"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",
     "@babel/preset-env": "^7.28.3",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/express-rate-limit": "^6.0.2",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.97",
     "babel-loader": "^10.0.0",
     "concurrently": "^9.2.1",

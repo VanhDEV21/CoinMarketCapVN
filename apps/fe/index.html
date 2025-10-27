@@ -11,20 +11,31 @@
 </head>
 <body>
   <div class="container">
-    <h1>Top 100 Cryptocurrency</h1>
+    <div class="header">
+      <h1>CryptoMarketCap</h1>
+      <div class="auth-actions">
+        <button id="btn-login"  style="display:none;" onclick="location.href='login.html'">Login</button>
+        <button id="btn-logout" style="display:none;" onclick="logout()">Logout</button>
+      </div>
+    </div>
+    <div id="login-hint">Please <a href="login.html">login</a> to use Watchlist.</div>
+    <div class="tabs">
+      <button id="tab-all" class="tab active">All</button>
+      <button id="tab-watch" class="tab">Watchlist ★</button>
+    </div>
     <table id="coin-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Name</th>
-          <th>Price</th>
-          <th>5m %</th>
-          <th>1h %</th>
-          <th>24h %</th>
-          <th>Volume 24h</th>
-          <th>Market Cap</th>
-        </tr>
-      </thead>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Price</th>
+        <th id="th-5m" style="cursor: pointer;">5m %</th>
+        <th id="th-1h" style="cursor: pointer;">1h %</th>
+        <th id="th-24h" style="cursor: pointer;">24h %</th>
+        <th>Volume 24h</th>
+        <th>Market Cap</th>
+      </tr>
+    </thead>
       <tbody id="coin-table-body">
         <!-- Dữ liệu sẽ được chèn vào đây từ API -->
       </tbody>
@@ -45,6 +56,7 @@
   </div>
   
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="auth.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
