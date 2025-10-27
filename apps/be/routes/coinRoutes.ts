@@ -11,4 +11,6 @@ router.get('/top-coins', coinController.getTopCoins);
 
 router.get('/history/:symbol', coinController.getHistoryBySymbol);
 
+router.get('/ohlc/:symbol', coinController.getOHLC);
+
 export default router;

@@ -40,4 +40,19 @@ export class CoinController {
       res.status(500).json({ error: 'Error fetching coin history' });
     }
   };
+    public getOHLC = async (req: Request, res: Response) => {
+      try {
+        const symbol = req.params.symbol;
+        const tf = (req.query.tf as string) || req.query.interval || '60';
+        const limit = Number(req.query.limit || 100);
+
+        const data = await this.coinService.getOHLCFromExistingData(symbol, tf as string, limit);
+        res.status(200).json(data);
+      } catch (error) {
+        console.error('Error fetching OHLC:', error);
+        res.status(500).json({ error: 'Error fetching OHLC data' });
+      }
+  };
+
+
 }

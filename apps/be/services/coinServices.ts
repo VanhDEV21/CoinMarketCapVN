@@ -2,6 +2,7 @@ import axios from 'axios';
 import { CoinRepository } from '../repositories/CoinRepository';
 import { ICoin } from '../interfaces/ICoin';
 import Coin from '../models/CoinModel';
+import { tfToMinutes } from '../utils/tsToMinutes';
 
 const API_KEY = '73feb218-7d95-459b-a40b-5f726d5c9c01';
 export class CoinService {
@@ -56,12 +57,14 @@ export class CoinService {
         const marketCapDominance = USD.market_cap_dominance;
         const marketCap = USD.market_cap;
         const volumeChange24h = USD.volume_change_24h;
-        const previousCoin = await Coin.findOne({ symbol }).sort({ version: -1 }).skip(1);
-        let percentChange5min = 0;
-        if (previousCoin) {
-          const previousPrice = previousCoin.currentPrice;
-          percentChange5min = ((currentPrice - previousPrice) / previousPrice) * 100; 
-        }
+
+        
+      const previous = await Coin.findOne({ symbol, version: newVersion - 1 })
+        .select({ currentPrice: 1 })
+        .lean();
+      const percentChange5min = previous
+        ? ((currentPrice - previous.currentPrice) / previous.currentPrice) * 100
+        : 0;
 
         const coinData: ICoin = {
           cmc_Id: id,
@@ -102,23 +105,22 @@ export class CoinService {
       throw error; 
     }
   }
-
   async getHistoryBySymbol(symbol: string, count = 2016) {
     const take = Math.min(Number(count) || 2016, 10000);
 
-    const docs = await Coin.find({ symbol: symbol })
-      .select({ currentPrice: 1, timestamp: 1, version: 1, _id: 0 })
-      .sort({ timestamp: -1 })
-      .limit(take)             
-      .lean();
-
+    const docs = await this.coinRepo.findHistoryBySymbol(symbol, take);
     docs.reverse();
-
     return docs.map(d => ({
       t: d.timestamp,
       price: d.currentPrice,
+      volume: d.volume24h ?? 0,
       version: d.version,
     }));
   }
 
+  async getOHLCFromExistingData(symbol: string, tf: string | number = 60, limit = 100) {
+    const minutes = tfToMinutes(tf);
+    return this.coinRepo.aggregateOHLC(symbol, minutes, limit);
+  }
+  
 }

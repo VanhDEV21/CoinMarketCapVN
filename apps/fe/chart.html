@@ -5,98 +5,194 @@
   <title>Coin Chart — 7 Days</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{
-      --bg:#0f1620;         /* nền trang */
-      --card:#101823;       /* nền khung chart */
-      --grid:#1f2a38;       /* màu lưới */
-      --text:#c9d4e5;       /* chữ chính */
-      --muted:#7e8ca3;      /* chữ phụ */
+    :root {
+      --bg: #0f1620;
+      --card: #101823;
+      --grid: #1f2a38;
+      --text: #c9d4e5;
+      --muted: #7e8ca3;
+      --border: #1a2431;
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--text)}
-    .wrap{max-width:1100px;margin:0 auto;padding:18px}
-    header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-    h1{font-size:18px;font-weight:600;margin:0}
-    .panel{background:var(--card);border:1px solid #1a2431;border-radius:14px;padding:14px}
-    .meta{color:var(--muted);margin:8px 2px 12px}
-    #chartWrap{height:62vh}
 
-    *{box-sizing:border-box}
+    * { box-sizing: border-box; }
 
-    /* Bố cục chính */
-    .coin-info{
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* --- Bố cục chính: Info trái, Chart phải, Chart nhỏ hơn và đẩy lên trên --- */
+    .main-container {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start; /* đẩy chart lên ngang đầu bảng */
+      gap: 24px;
+      max-width: 1600px;
+      margin: 40px auto;
+      padding: 0 24px;
+      transform: translateX(-120px); /* Dịch sang trái 5cm (khoảng 50px) */
+    }
+
+    /* --- Bảng thông tin coin (bên trái) --- */
+    .coin-info {
       background: var(--card);
+      border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 14px;
-      box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
-      margin-bottom: 20px;
-    }
-    /* Tiêu đề */
-    h2 {
-      color: var(--primary-color);
-      margin-bottom: 10px;
+      padding: 18px 22px;
+      width: 408px; /* ✅ tăng từ ~340px → 408px (+20%) */
+      min-width: 380px;
+      box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+      flex-shrink: 0;
     }
 
-    /* Các chi tiết của coin */
-    .coin-details {
-      margin-top: 10px;
+    .coin-info h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
     }
 
     .coin-detail {
-      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 14px;
     }
 
     .coin-detail strong {
-      font-weight: bold;
+      color: var(--muted);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    /* --- Chart Panel (bên phải, nhỏ hơn và đẩy lên ngang đầu bảng) --- */
+    .chart-panel {
+      flex: 0 0 60%; /* chỉ chiếm 1 nửa chiều rộng */
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      min-height: 50vh; /* thấp hơn */
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .chart-type-switch {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .chart-type-switch button {
+      background: #252b38;
+      border: none;
+      color: #c9d4e5;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .chart-type-switch button.active {
+      background: #38455a;
+      color: #fff;
+    }
+
+    .chart-type-switch button:hover {
+      background: #303b4c;
+    }
+
+    #chartWrap {
+      flex: 1;
+      height: 100%;
+      /* min-height: 360px; */
+    }
+
+    /* --- Responsive nhỏ (mobile) --- */
+    @media (max-width: 900px) {
+      .main-container {
+        flex-direction: column;
+        align-items: center;
+      }
+      .coin-info {
+        width: 95%;
+      }
+      .chart-panel {
+        width: 95%;
+        flex: 1;
+      }
     }
   </style>
 </head>
 <body>
-   <div class="container">
+
+  <div class="main-container">
+    <!-- Bảng thông tin bên trái -->
     <div class="coin-info">
-      <div id="title"></div>
-      <div id="subtitle"></div>
-      <div class="coin-details">
-        <div class="coin-detail">
-          <strong>Price: </strong><span id="price">$--</span>
-        </div>
-        <div class="coin-detail">
-          <strong>Market Cap: </strong><span id="market-cap">$--</span>
-        </div>
-        <div class="coin-detail">
-          <strong>Volume change (24h): </strong><span id="volume-change-24h">$--</span>
-        </div>
-        <div class="coin-detail">
-          <strong>Circulating Supply: </strong><span id="circulating-supply">--</span>
-        </div>
-        <div class="coin-detail">
-          <strong>Total Supply: </strong><span id="total-supply">--</span>
-        </div>
-        <div class="coin-detail">
-          <strong>FDV: </strong><span id="fdv">--</span>
-        </div>
-        <div class="coin-detail">
-          <strong>Max Supply: </strong><span id="max-supply">--</span>
-        </div>
+      <h2 id="title">Coin Info</h2>
+      <div class="meta" id="subtitle">Fetching data...</div>
+      <div class="coin-detail"><strong>Price:</strong> <span id="price">$--</span></div>
+      <div class="coin-detail"><strong>Market Cap:</strong> <span id="market-cap">$--</span></div>
+      <div class="coin-detail"><strong>Volume 24h:</strong> <span id="volume-change-24h">$--</span></div>
+      <div class="coin-detail"><strong>Circulating:</strong> <span id="circulating-supply">--</span></div>
+      <div class="coin-detail"><strong>Total Supply:</strong> <span id="total-supply">--</span></div>
+      <div class="coin-detail"><strong>Max Supply:</strong> <span id="max-supply">--</span></div>
+      <div class="coin-detail"><strong>FDV:</strong> <span id="fdv">--</span></div>
     </div>
-    </div>
-  </div>
-  <div class="wrap">
-    <div class="panel">
-      <div class="meta" id="subtitle">Fetching data…</div>
+
+    <!-- Biểu đồ nhỏ hơn, nằm ngang đầu bảng -->
+    <div class="chart-panel">
+      <div class="chart-type-switch">
+        <button id="btn-line" class="active">📈 Line</button>
+        <button id="btn-candle">🕯️ Candle</button>
+      </div>
       <div id="chartWrap">
         <canvas id="coinChart"></canvas>
       </div>
     </div>
   </div>
 
-  <!-- libs -->
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<!-- libs -->
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 
-  <!-- logic -->
-  <script src="chart.js"></script>
+<!-- ✅ financial chart plugin for Chart.js 4 -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial/dist/chartjs-chart-financial.min.js"></script>
+
+<!-- ✅ Register candlestick/ohlc types -->
+<script>
+  // Đăng ký financial controllers/elements
+  const fin = window['chartjs-chart-financial'] || {};
+  const {
+    CandlestickController, CandlestickElement,
+    OhlcController, OhlcElement
+  } = fin;
+
+  // Đăng ký TimeScale & LinearScale (đề phòng build slim)
+  const { TimeScale, LinearScale, CategoryScale, Tooltip, Legend } = Chart;
+
+  Chart.register(
+    CandlestickController, CandlestickElement,
+    OhlcController, OhlcElement,
+    TimeScale, LinearScale, CategoryScale, Tooltip, Legend
+  );
+
+  // Debug xem scale 'time' đã có chưa
+  // console.log('time scale?', Chart.registry.getScale('time'));
+</script>
+
+<!-- logic -->
+<script src="chart.js"></script>
+
 </body>
 </html>
  

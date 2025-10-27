@@ -1,317 +1,396 @@
-// ===== chart.js (CMC style, average line, up/down by avg - stable) =====
+// ===== chart.js (Line + Avg + Volume + Candle toggle) =====
 (function () {
   const API_BASE = 'http://localhost:5000/api/coins';
 
-  // đọc query
+  // --- query + DOM
   const qs = new URLSearchParams(location.search);
   const symbol = (qs.get('symbol') || '');
   const name = qs.get('name') || '';
-
   const titleEl = document.getElementById('title');
   const subtitleEl = document.getElementById('subtitle');
-
-  if (!symbol) {
-    titleEl.textContent = 'Missing symbol';
-    subtitleEl.textContent = '';
-    return;
-  }
+  
+  if (!symbol) { titleEl.textContent = 'Missing symbol'; subtitleEl.textContent = ''; return; }
   titleEl.textContent = `${name} (${symbol}) — ~7 Days`;
 
   let chart;
-  // Hàm lấy dữ liệu cho coin theo symbol
-async function getCoinInfoBySymbol(symbol) {
-  try {
-    // Gọi API /top-coins để lấy danh sách các coin
-    const response = await axios.get('http://localhost:5000/api/coins/top-coins');
+  let rawHistory = { points: [], volumes: [] };
 
-    // Tìm coin trong danh sách theo symbol
-    const coin = response.data.find(c => c.symbol === symbol);
-
-    if (!coin) {
-      console.error('Coin not found');
-      return null;
-    }
-
-    // Trả về thông tin coin cần thiết
-    return {
-      name: coin.name,
-      symbol: coin.symbol,
-      currentPrice: coin.currentPrice,
-      marketCap: coin.marketCap,
-      circulatingSupply: coin.circulating_supply,
-      totalSupply: coin.total_supply,
-      maxSupply: coin.max_supply || '∞',
-      volume24h: coin.volume24h,
-      volumeChange24h: coin.volumeChange24h,
-      percentChange1h: coin.percentChange1h,
-      percentChange24h: coin.percentChange24h,
-      percentChange7d: coin.percentChange7d,
-      marketCapDominance: coin.marketCapDominance,
-      cmcRank: coin.cmc_rank,
-      fullyDilutedMarketCap: coin.fullyDilutedMarketCap,
-      timestamp: coin.timestamp,
-    };
-  } catch (error) {
-    console.error('Error fetching coin data:', error);
-    return null;
+  // [ADD] --- chart type toggle
+  let chartType = 'line'; // default
+  document.getElementById('btn-line').onclick = () => {
+    chartType = 'line';
+    renderChart();
+    setActive('btn-line');
+  };
+  document.getElementById('btn-candle').onclick = () => {
+    chartType = 'candle';
+    renderChart();
+    setActive('btn-candle');
+  };
+  function setActive(id) {
+    document.querySelectorAll('.chart-type-switch button').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
   }
-}
 
-async function fetchCoinInfo(symbol) {
+  // --- coin info (rút gọn)
+  async function getCoinInfoBySymbol(symbol) {
+    try {
+      const { data } = await axios.get(`${API_BASE}/top-coins`);
+      const c = data.find(x => x.symbol === symbol);
+      if (!c) return null;
+      return {
+        currentPrice: c.currentPrice,
+        marketCap: c.marketCap,
+        circulatingSupply: c.circulating_supply,
+        totalSupply: c.total_supply,
+        maxSupply: c.max_supply || '∞',
+        volumeChange24h: c.volumeChange24h,
+        fullyDilutedMarketCap: c.fullyDilutedMarketCap
+      };
+    } catch { return null; }
+  }
+  (async () => {
+    const c = await getCoinInfoBySymbol(symbol);
+    if (!c) return;
+    const $ = id => document.getElementById(id);
+    $('price').textContent = `$${c.currentPrice}`;
+    $('market-cap').textContent = `$${(c.marketCap ?? 0).toLocaleString()}`;
+    $('circulating-supply').textContent = (c.circulatingSupply ?? 0).toLocaleString();
+    $('volume-change-24h').textContent = `${c.volumeChange24h ?? '--'}%`;
+    $('total-supply').textContent = c.totalSupply ? c.totalSupply.toLocaleString() : '--';
+    $('max-supply').textContent = c.maxSupply ? c.maxSupply.toLocaleString() : '--';
+    $('fdv').textContent = `${c.fullyDilutedMarketCap ?? '--'}`;
+  })();
+
+  // --- helper: chèn giao điểm với avg để đổi màu mượt
+  function injectAvgIntersections(points, avg) {
+    const out = [];
+    for (let i = 0; i < points.length; i++) {
+      const p1 = points[i];
+      if (i === 0) { out.push(p1); continue; }
+      const p0 = points[i-1];
+      const d0 = p0.y - avg, d1 = p1.y - avg;
+      if ((d0 > 0 && d1 < 0) || (d0 < 0 && d1 > 0)) {
+        const x0 = +p0.x, x1 = +p1.x;
+        const ratio = (avg - p0.y) / (p1.y - p0.y);
+        out.push({ x: new Date(x0 + ratio * (x1 - x0)), y: avg });
+      }
+      out.push(p1);
+    }
+    return out;
+  }
+
+  // --- màu & theme
+  const GREEN = '#1ecb73', RED = '#ff3b57';
+  const GRID  = '#1f2a38', TICK = '#7e8ca3';
+
+  // --- render chung
+  function baseOptions({ ySuggestedMin, suggestedMaxVol }) {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0f1620',
+          borderColor: '#29374a',
+          borderWidth: 1,
+          titleColor: '#c9d4e5',
+          bodyColor: '#e9f0ff',
+          callbacks: {
+            label: (ctx) => {
+              if (ctx.dataset.type === 'bar') {
+                const v = Number(ctx.parsed?.y || 0);
+                return 'Volume ' + new Intl.NumberFormat('en-US', { notation:'compact', maximumFractionDigits:2 }).format(v);
+              }
+              if (ctx.dataset.label === 'Avg') return ' Avg $' + (ctx.parsed?.y ?? 0);
+              return ' $' + (ctx.parsed?.y ?? 0);
+            }
+          }
+        }
+      },
+      layout: {
+        padding: { left: 10, right: 10 }
+      },
+
+      elements: { line: { capBezierPoints: true }, point: { hitRadius: 8 } },
+      scales: {
+        x: { type: 'time', time: { unit: 'day', tooltipFormat: 'MMM dd HH:mm' }, grid: { color: GRID }, ticks: { color: TICK } },
+        y: { position: 'right', grid: { color: GRID }, suggestedMin: ySuggestedMin, ticks: { color: TICK, callback: v => '$' + Number(v) } },
+        yVol: { position: 'left', grid: { drawOnChartArea: false }, suggestedMin: 0, suggestedMax: suggestedMaxVol, ticks: { display: false } }
+      }
+    };
+  }
+
+  function destroyChart() { if (chart) chart.destroy(); }
+
+  // --- render LINE (giữ volume dưới)
+  function renderLine(points, volumes) {
+    const prices = points.map(p => p.y);
+    const minP = Math.min(...prices), maxP = Math.max(...prices);
+    const range = Math.max(1e-12, maxP - minP);
+    const avg = prices.reduce((s,v)=>s+v,0)/prices.length;
+    const lastX = points.at(-1).x;
+    const sevenDaysAgo = new Date(+lastX - 7*24*60*60*1000);   
+    // đẩy trục giá lên để chừa đáy cho volume
+    const ySuggestedMin = minP + range * 0.22;
+
+    const maxVol = Math.max(...volumes, 0);
+    const suggestedMaxVol = maxVol > 0 ? maxVol * 10 : 1;
+
+    const volColors = volumes.map((_, i) => {
+      if (i === 0) return 'rgba(128,128,128,0.35)';
+      return points[i].y >= points[i - 1].y ? 'rgba(0,200,140,0.38)' : 'rgba(255,70,70,0.38)';
+    });
+
+    const injected = injectAvgIntersections(points, avg);
+    const greenGrad = 'rgba(30,203,115,0.12)';
+    const redGrad   = 'rgba(255,59,87,0.12)';
+
+    const ctx = document.getElementById('coinChart').getContext('2d');
+    destroyChart();
+    chart = new Chart(ctx, {
+      data: {
+        datasets: [
+          // Volume
+          {
+            type: 'bar',
+            label: 'Volume',
+            data: points.map((p, i) => ({ x: p.x, y: volumes[i] })),
+            parsing: false,
+            yAxisID: 'yVol',
+            backgroundColor: volColors,
+            borderWidth: 0,
+            barThickness: Math.max(1, Math.floor(700 / points.length)),
+            maxBarThickness: 4,
+            categoryPercentage: 1,
+            barPercentage: 1,
+            order: 0
+          },
+          // Price line + area fill
+          {
+            type: 'line',
+            label: `${symbol} Price`,
+            data: injected,
+            parsing: false,
+            yAxisID: 'y',
+            spanGaps: true,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 3.5,
+            pointHoverBackgroundColor: ctx => (ctx.parsed.y >= avg) ? GREEN : RED,
+            pointHoverBorderColor:   ctx => (ctx.parsed.y >= avg) ? GREEN : RED,
+            pointHoverBorderWidth: 2,
+            tension: 0.25,
+            fill: { target: ySuggestedMin },  // không đè volume
+            borderColor: GREEN,
+            backgroundColor: greenGrad,
+            segment: {
+              borderColor: ctx => (ctx.p0.parsed.y >= avg && ctx.p1.parsed.y >= avg) ? GREEN : RED,
+              backgroundColor: ctx => (ctx.p0.parsed.y >= avg && ctx.p1.parsed.y >= avg) ? greenGrad : redGrad
+            },
+            order: 2
+          },
+          // Avg line
+          {
+            type: 'line',
+            label: 'Avg',
+            data: points.map(p => ({ x: p.x, y: avg })),
+            parsing: false,
+            yAxisID: 'y',
+            borderColor: '#9aa7bd',
+            borderDash: [6, 6],
+            borderWidth: 1.5,
+            pointRadius: 0,
+            fill: false,
+            tension: 0,
+            order: 3
+          }
+        ]
+      },
+      options: {
+        ...baseOptions({ ySuggestedMin, suggestedMaxVol }),
+        scales:{
+          ...baseOptions({ ySuggestedMin, suggestedMaxVol }).scales,
+          x: {
+          type: 'time',
+          time: { unit: 'day', tooltipFormat: 'MMM dd HH:mm' },
+          grid: { color: GRID },
+          ticks: { color: TICK },
+          min: sevenDaysAgo,       
+          max: lastX
+        }}
+      },
+
+
+    });
+  }
+
+  // [ADD] --- render candle (từ API /ohlc/:symbol)
+async function renderCandle() {
   try {
-        const coin = await getCoinInfoBySymbol(symbol);
-    if (!coin) {
-      console.error('Coin not found');
+    const { data } = await axios.get(`${API_BASE}/ohlc/${symbol}`);
+    if (!data || !data.length) {
+      subtitleEl.textContent = 'No candle data returned from API.';
       return;
     }
 
-    // Cập nhật thông tin đồng tiền vào phần Coin Info
-    document.getElementById('price').textContent = `$${coin.currentPrice}`;
-    document.getElementById('market-cap').textContent = `$${coin.marketCap.toLocaleString()}`;
-    document.getElementById('volume-change-24h').textContent = `$${coin.volumeChange24h.toLocaleString()}`;
-    document.getElementById('circulating-supply').textContent = coin.circulatingSupply.toLocaleString();
-    document.getElementById('total-supply').textContent = coin.totalSupply ? coin.totalSupply.toLocaleString() : '--';
-    document.getElementById('max-supply').textContent = coin.maxSupply ? coin.maxSupply.toLocaleString() : '--';
-    document.getElementById('fdv').textContent = `${coin.fullyDilutedMarketCap}`;
+    // --- Chuẩn hóa dữ liệu nến
+    const candleData = data.map(d => ({
+      x: new Date(d.t),
+      o: d.open,
+      h: d.high,
+      l: d.low,
+      c: d.close
+    }));
+
+    const lastDate = new Date(candleData.at(-1).x);
+    const firstDate = new Date(candleData[0].x);
+    const sevenDaysAgo = new Date(lastDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const filtered =
+      candleData.length > 0
+        ? candleData.filter(d => d.x >= sevenDaysAgo)
+        : candleData;
+
+    const rangeDays = (lastDate - firstDate) / (1000 * 60 * 60 * 24);
+
+    const ctx = document.getElementById('coinChart').getContext('2d');
+    destroyChart();
+
+    chart = new Chart(ctx, {
+      type: 'candlestick',
+      data: {
+        datasets: [
+          {
+            label: `${symbol} OHLC Chart`,
+            data: filtered,
+            borderColor: '#1ecb73',
+            color: {
+              up: '#1ecb73',
+              down: '#ff3b57',
+              unchanged: '#7e8ca3'
+            },
+            barThickness: 8,
+            borderWidth: 1.2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        aspectRatio: 2,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: '#0f1620',
+            borderColor: '#29374a',
+            borderWidth: 1,
+            titleColor: '#c9d4e5',
+            bodyColor: '#e9f0ff',
+            callbacks: {
+              label: ctx => {
+                const d = ctx.raw;
+                return `O:${d.o}  H:${d.h}  L:${d.l}  C:${d.c}`;
+              }
+            }
+          }
+        },
+        layout: {
+          padding: { left: 10, right: 10, bottom: 14 } 
+        },
+        scales: {
+          x: {
+            type: 'timeseries',
+            // ✅ ép unit + step để có nhãn như line chart
+            time: {
+              unit: rangeDays < 1 ? 'hour' : 'day',
+              stepSize: rangeDays < 1 ? 2 : 1,
+              tooltipFormat: 'MMM dd HH:mm',
+              displayFormats: {
+                hour: 'HH:mm',
+                day: 'MMM dd'
+              }
+            },
+            // ✅ giúp hiện nhãn đều, không auto-skip quá mạnh tay
+            ticks: {
+              display: true,
+              color: '#7e8ca3',
+              source: 'data',        // lấy mốc từ chính dữ liệu nến
+              autoSkip: false,       // đừng bỏ quá nhiều nhãn
+              maxRotation: 0,
+              minRotation: 0,
+              padding: 6,
+              maxTicksLimit: 12      // tránh quá dày
+            },
+            grid: { color: '#1f2a38' },
+            offset: false,            // tránh tạo khoảng trắng hai đầu làm “tụt” labels
+            bounds: 'ticks' 
+          },
+          y: {
+            position: 'right',
+            grid: { color: '#1f2a38' },
+            ticks: {
+              color: '#7e8ca3',
+              callback: v => '$' + Number(v).toLocaleString()
+            }
+          }
+        }
+      }
+    });
+
+    // --- Cập nhật subtitle cho đẹp
+    const first = filtered[0].x;
+    const avg =
+      filtered.reduce((s, d) => s + (d.c ?? 0), 0) / filtered.length;
+    const change =
+      ((filtered.at(-1).c - filtered[0].o) / filtered[0].o) * 100;
+
+    subtitleEl.textContent = `Candles: ${filtered.length} • ${first.toLocaleString()} → ${lastDate.toLocaleString()} • Δ ${change.toFixed(
+      2
+    )}% • Avg: $${avg.toFixed(2)}`;
   } catch (err) {
-    console.error('Error fetching coin info:', err);
+    console.error('Error loading candle data:', err);
+    subtitleEl.textContent = 'Error loading candle data.';
   }
 }
- fetchCoinInfo(symbol);
 
-// === NEW: chèn điểm giao giữa đoạn (p0->p1) với avg để đổi màu đúng tại giao điểm
-function injectAvgIntersections(points, avg) {
-  const out = [];
-  for (let i = 0; i < points.length; i++) {
-    const p1 = points[i];
-    if (i === 0) { out.push(p1); continue; }
-    const p0 = points[i-1];
 
-    const d0 = p0.y - avg;
-    const d1 = p1.y - avg;
 
-    // Khác phía so với avg => có giao điểm
-    if ((d0 > 0 && d1 < 0) || (d0 < 0 && d1 > 0)) {
-      const x0 = +new Date(p0.x), x1 = +new Date(p1.x);
-      const ratio = (avg - p0.y) / (p1.y - p0.y); // 0..1
-      const xCross = new Date(x0 + ratio * (x1 - x0));
-      out.push({ x: xCross, y: avg });  // chèn điểm giao
+
+  // [ADD] --- smart switch renderer
+  function renderChart() {
+    if (chartType === 'line') {
+      renderLine(rawHistory.points, rawHistory.volumes);
+    } else {
+      renderCandle();
     }
-    out.push(p1);
   }
-  return out;
-}
 
+  // --- fetch + initial render
   (async function loadAndRender() {
     try {
       const { data } = await axios.get(`${API_BASE}/history/${symbol}`);
       if (!Array.isArray(data) || data.length < 2) {
-        subtitleEl.textContent = 'No/insufficient data returned from API.';
-        console.error('History API returned:', data);
-        return;
+        subtitleEl.textContent = 'No/insufficient data returned from API.'; return;
       }
+      data.sort((a,b)=>new Date(a.t)-new Date(b.t));
+      rawHistory.points  = data.map(d => ({ x: new Date(d.t), y: Number(d.price) }));
+      rawHistory.volumes = data.map(d => Number(d.volume ?? 0));
 
-      // đảm bảo thời gian tăng dần
-      data.sort((a, b) => new Date(a.t) - new Date(b.t));
-      // chuẩn hóa thành {x, y}
-      const rawPoints = data.map(d => ({ x: new Date(d.t), y: Number(d.price) }));
-      const prices = rawPoints.map(p => p.y);
+      const first = rawHistory.points[0].x, last = rawHistory.points.at(-1).x;
+      const change = ((rawHistory.points.at(-1).y - rawHistory.points[0].y) / rawHistory.points[0].y) * 100;
+      const avg = rawHistory.points.reduce((s,p)=>s+p.y,0)/rawHistory.points.length;
+      subtitleEl.textContent = `Points: ${data.length} • ${first.toLocaleString()} → ${last.toLocaleString()} • Δ ${change.toFixed(2)}% • Avg: $${avg}`;
 
-      // average toàn bộ chuỗi hiện có
-      const avg = prices.reduce((s, v) => s + v, 0) / prices.length;
-
-      // chèn điểm giao để segment đổi màu chính xác ngay tại avg
-      const points = injectAvgIntersections(rawPoints, avg);
-
-
-      const first = points[0].x, last = points.at(-1).x;
-      const change = ((points.at(-1).y - points[0].y) / points[0].y) * 100;
-
-      subtitleEl.textContent =
-        `Points: ${data.length} • ${first.toLocaleString()} → ${last.toLocaleString()} • Δ ${change.toFixed(2)}% • Avg: $${avg}`;
-
-      const ctx = document.getElementById('coinChart').getContext('2d');
-      if (chart) chart.destroy();
-
-      // màu & theme
-      const GREEN = '#1ecb73', RED = '#ff3b57';
-      const GRID  = '#1f2a38', TICK = '#7e8ca3';
-
-      // gradient an toàn (tạo sau layout)
-      let greenGrad = 'rgba(30,203,115,0.18)';
-      let redGrad   = 'rgba(255,59,87,0.18)';
-      const gradientPlugin = {
-        id: 'safeGradient',
-        afterLayout(c) {
-          const { ctx, chartArea } = c;
-          if (!chartArea) return;
-          const g1 = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-          g1.addColorStop(0, 'rgba(30,203,115,0.22)');
-          g1.addColorStop(1, 'rgba(30,203,115,0.00)');
-          const g2 = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-          g2.addColorStop(0, 'rgba(255,59,87,0.22)');
-          g2.addColorStop(1, 'rgba(255,59,87,0.00)');
-          greenGrad = g1; redGrad = g2;
-
-          // cập nhật background sau khi có gradient (không animation)
-          c.data.datasets[0].backgroundColor = greenGrad; // up
-          c.data.datasets[1].backgroundColor = redGrad;   // down
-        }
-      };
-
-      chart = new Chart(ctx, {
-        type: 'line',
-        // data: {
-        //   labels,
-        //   datasets: [
-        //     // 1) đoạn TRÊN average (xanh)
-        //     {
-        //       label: `${symbol} Price (above avg)`,
-        //       data: upData,
-        //       borderColor: GREEN,
-        //       backgroundColor: greenGrad,  
-        //       borderWidth: 2,
-        //       pointRadius: 0,
-        //       tension: 0.25,
-        //       fill: true
-        //     },
-        //     // 2) đoạn DƯỚI average (đỏ)
-        //     {
-        //       label: `${symbol} Price (below avg)`,
-        //       data: downData,
-        //       borderColor: RED,
-        //       backgroundColor: redGrad,
-        //       borderWidth: 2,
-        //       pointRadius: 0,
-        //       tension: 0.25,
-        //       fill: true
-        //     },
-        //     // 3) đường AVERAGE (gạch đứt)
-        //     {
-        //       label: '7D Average',
-        //       data: labels.map(() => avg),
-        //       borderColor: '#9aa7bd',
-        //       borderDash: [6, 6],
-        //       borderWidth: 1.5,
-        //       pointRadius: 0,
-        //       tension: 0,
-        //       fill: false
-        //     }
-        //   ]
-        // },
-        data: {
-          // Không cần labels khi dùng {x,y} + thang time
-          datasets: [
-            // === MAIN: đường giá duy nhất (liền mạch)
-            {
-              label: `${symbol} Price`,
-              data: points,
-              parsing: false,
-              spanGaps: true,
-              borderWidth: 2,
-              pointRadius: 0,
-              // NEW ↓ chấm hiện ra khi hover và đổi màu theo phía trên/dưới avg
-              pointHoverRadius: 4,
-              pointHoverBackgroundColor: ctx =>
-                (ctx.parsed.y >= avg) ? '#1ecb73' : '#ff3b57',
-              pointHoverBorderColor: ctx =>
-                (ctx.parsed.y >= avg) ? '#1ecb73' : '#ff3b57',
-              pointHoverBorderWidth: 2,
-              tension: 0.25,
-              fill: true,
-              borderColor: '#1ecb73',
-              backgroundColor: 'rgba(30,203,115,0.18)',
-              segment: {
-                borderColor: ctx =>
-                  (ctx.p0.parsed.y >= avg && ctx.p1.parsed.y >= avg) ? '#1ecb73' : '#ff3b57'
-                // backgroundColor set trong gradientPlugin
-              }
-            },
-
-            // === AVG line (xám gạch đứt)
-            {
-              label: '7D Average',
-              data: points.map(p => ({ x: p.x, y: avg })),
-              parsing: false,
-              borderColor: '#9aa7bd',
-              borderDash: [6, 6],
-              borderWidth: 1.5,
-              pointRadius: 0,
-              tension: 0,
-              fill: false
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          animation: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: '#0f1620',
-              borderColor: '#29374a',
-              borderWidth: 1,
-              titleColor: '#c9d4e5',
-              bodyColor: '#e9f0ff',
-              // NEW ↓ tô màu ô vuông từng dòng trong tooltip
-              callbacks: {
-                labelColor: (ctx) => {
-                  if (ctx.datasetIndex === 0) {
-                    // dòng GIÁ: xanh nếu >= avg, đỏ nếu < avg
-                    const y = ctx.parsed?.y;
-                    const color = (y >= avg) ? '#1ecb73' : '#ff3b57';
-                    return { borderColor: color, backgroundColor: color };
-                  }
-                  // dòng AVG: xám
-                  return { borderColor: '#9aa7bd', backgroundColor: '#9aa7bd' };
-                },
-                label: (ctx) => {
-                  const v = Number(ctx.parsed?.y);
-                  if (ctx.datasetIndex === 0) {
-                    // dòng GIÁ
-                    return ' $' + v;
-                  }
-                  // dòng AVG
-                  return ' Avg $' + avg;
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              type: 'time',
-              time: { unit: 'day', tooltipFormat: 'MMM dd HH:mm' },
-              grid: { color: GRID },
-              ticks: { color: TICK }
-            },
-            y: {
-              position: 'right',
-              grid: { color: GRID },
-              ticks: {
-                color: TICK,
-                callback: v => '$' + Number(v)
-              }
-            }
-          },
-          layout: { padding: { left: 6, right: 6, top: 4, bottom: 0 } },
-          elements: { line: { capBezierPoints: true } }
-        },
-        plugins: [gradientPlugin]
-      });
+      renderChart(); // [ADD] dùng hàm tổng hợp
     } catch (err) {
       console.error('Chart load error:', err?.response?.status, err?.response?.data || err.message);
       subtitleEl.textContent = 'Error loading chart data.';
     }
   })();
 })();
-
-
-
-
-
-
-
-
-
