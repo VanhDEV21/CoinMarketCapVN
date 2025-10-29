@@ -12,11 +12,16 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>CryptoMarketCap</h1>
+      <h1 class="brand">
+        <a id="brand-home" href="index.html">CryptoMarketCap</a>
+      </h1>
       <div class="auth-actions">
         <button id="btn-login"  style="display:none;" onclick="location.href='login.html'">Login</button>
         <button id="btn-logout" style="display:none;" onclick="logout()">Logout</button>
       </div>
+    </div>
+    <div class=" toolbar">
+      <input id="search-input" type="text" placeholder="Search by name or symbol..." />
     </div>
     <div id="login-hint">Please <a href="login.html">login</a> to use Watchlist.</div>
     <div class="tabs">

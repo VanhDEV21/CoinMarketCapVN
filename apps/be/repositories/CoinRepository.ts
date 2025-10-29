@@ -15,7 +15,7 @@ export class CoinRepository {
 
   async findHistoryBySymbol(symbol: string, count:number): Promise<ICoin[] | null> {
     return Coin.find({ symbol: symbol })
-      .select({ currentPrice: 1,volume24h: 1, timestamp: 1, version: 1, _id: 0 })
+      .select({ currentPrice: 1,volume24h: 1,marketCap: 1, timestamp: 1, version: 1, _id: 0 })
       .sort({ timestamp: -1 })
       .limit(count)
       .lean();

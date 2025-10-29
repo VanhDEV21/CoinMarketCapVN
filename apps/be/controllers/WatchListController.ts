@@ -49,7 +49,7 @@ public addToWatchlist = async (req: Request, res: Response) => {
   public removeFromWatchlist = async (req: Request, res: Response) => {
     try {
       const uid = (req as any).auth?.uid;
-      const symbolRaw = String(req.params.symbol || '').toUpperCase().trim();
+      const symbolRaw = String(req.params.symbol || '').trim();
       if (!symbolRaw) return res.status(400).json({ error: true, message: 'Missing symbol' });
 
       const userId = new mongoose.Types.ObjectId(uid);
@@ -69,7 +69,7 @@ public addToWatchlist = async (req: Request, res: Response) => {
   public toggleWatchlist = async (req: Request, res: Response) => {
     try {
       const uid = (req as any).auth?.uid;
-      const symbolRaw = String(req.body?.symbol || '').toUpperCase().trim();
+      const symbolRaw = String(req.body?.symbol || '').trim();
       if (!symbolRaw) return res.status(400).json({ error: true, message: 'Missing symbol' });
 
       const userId = new mongoose.Types.ObjectId(uid);

@@ -114,6 +114,7 @@ export class CoinService {
       t: d.timestamp,
       price: d.currentPrice,
       volume: d.volume24h ?? 0,
+      marketCap: d.marketCap ?? 0,
       version: d.version,
     }));
   }

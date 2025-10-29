@@ -8,6 +8,7 @@ const WATCH = {
   DEL:    (s) => `${WATCHLIST_BASE}/${encodeURIComponent(s)}`,
   TOGGLE: `${WATCHLIST_BASE}/toggle`,
 };
+let searchTerm = ''; // <-- query tìm kiếm
 
 const PAGE_SIZE = 20;
 
@@ -159,7 +160,9 @@ function displayCoinsPage(page = 1) {
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  const list = currentList();
+  // Áp dụng tab (all/watch) + search filter
+  const list0 = currentList();
+  const list = filterAndRank(list0);
   if (list.length === 0) {
     if (viewMode === 'watch') {
       const tr = document.createElement('tr');
@@ -194,7 +197,7 @@ function displayCoinsPage(page = 1) {
         <button class="watch-btn ${watched ? 'on' : ''}"
                 data-symbol="${coin.symbol}"
                 title="${watched ? 'Remove from Watchlist' : 'Add to Watchlist'}">★</button>
-        ${coin.name} (${coin.symbol})
+        ${highlight(coin.name, searchTerm)} (${highlight(coin.symbol, searchTerm)})
       </td>
       <td>$${Number(coin.currentPrice).toLocaleString(undefined,{ maximumFractionDigits: 8 })}</td>
       <td class="${cls5m}">${Number(coin.percentChange5min).toFixed(2)}%</td>
@@ -203,6 +206,7 @@ function displayCoinsPage(page = 1) {
       <td>$${Number(coin.volume24h).toLocaleString()}</td>
       <td>$${Number(coin.marketCap).toLocaleString()}</td>
     `;
+
 
     tbody.appendChild(row);
   });
@@ -247,7 +251,13 @@ async function fetchTopCoins() {
   try {
     const res = await axios.get(`${COINS_BASE}/top-coins`);
     const data = Array.isArray(res.data) ? res.data : [];
-    allCoinsOriginal = data.map((c, i) => ({ ...c, __idx: i }));
+    allCoinsOriginal = data.map((c, i) => ({
+      ...c,
+      __idx: i,
+      _normName: normalize(c.name),
+      _normSymbol: normalize((c.symbol || '')),
+    }));
+
     allCoinsView = [...allCoinsOriginal];
 
     // áp sort hiện tại (nếu có) sau khi fetch
@@ -289,6 +299,68 @@ function bindTabs() {
     viewMode = 'watch'; currentPage = 1; setActiveTab(); displayCoinsPage(currentPage);
   });
 }
+function debounce(fn, wait = 200) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+
+function normalize(s) {
+  return (s || '')
+    .toString()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().trim();
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlight(text, qRaw) {
+  if (!qRaw) return text;
+  const re = new RegExp(`(${escapeRegex(qRaw)})`, 'ig');
+  return String(text ?? '').replace(re, '<mark>$1</mark>');
+}
+
+function hasActiveSort() {
+  return Object.values(sortStates).some(s => s !== 'none');
+}
+
+// Xếp hạng theo độ khớp: symbol==query > symbol startsWith > name/symbol includes
+function scoreByQuery(coin, qNorm) {
+  const sym = coin._normSymbol;
+  const name = coin._normName;
+  if (!qNorm) return 0;
+  if (sym === qNorm) return 3;
+  if (sym.startsWith(qNorm)) return 2;
+  if (sym.includes(qNorm) || name.includes(qNorm)) return 1;
+  return 0;
+}
+
+// Lọc + (nếu không bật sort) thì xếp hạng theo relevance
+function filterAndRank(list) {
+  const q = (searchTerm || '').trim();
+  if (!q) return list;
+  const qNorm = normalize(q);
+  let filtered = list.filter(c => c._normSymbol.includes(qNorm) || c._normName.includes(qNorm));
+  if (!hasActiveSort()) {
+    filtered = filtered.sort((a, b) => {
+      const sa = scoreByQuery(a, qNorm);
+      const sb = scoreByQuery(b, qNorm);
+      if (sa !== sb) return sb - sa;
+      return Number(b.marketCap ?? 0) - Number(a.marketCap ?? 0); // tie-break theo MC
+    });
+  }
+  return filtered;
+}
+function bindSearch() {
+  const input = document.getElementById('search-input');
+  if (!input) return;
+  input.addEventListener('input', debounce((e) => {
+    searchTerm = e.target.value || '';
+    currentPage = 1;
+    displayCoinsPage(currentPage);
+  }, 150));
+}
 
 function bindSorting() {
   document.getElementById('th-5m')?.addEventListener('click', () => cycleSort('5m'));
@@ -301,6 +373,7 @@ window.addEventListener('DOMContentLoaded', () => {
   bindTableEvents();
   bindTabs();
   bindSorting();
+  bindSearch()
   updateSortHeaderUI();
   fetchTopCoins();
   setInterval(fetchTopCoins, 60 * 1000);

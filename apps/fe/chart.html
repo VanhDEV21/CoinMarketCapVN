@@ -74,12 +74,12 @@
 
     /* --- Chart Panel (bên phải, nhỏ hơn và đẩy lên ngang đầu bảng) --- */
     .chart-panel {
-      flex: 0 0 60%; /* chỉ chiếm 1 nửa chiều rộng */
+      flex: 0 0 72%; /* chỉ chiếm 1 nửa chiều rộng */
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 20px;
-      min-height: 50vh; /* thấp hơn */
+      min-height: 60vh; /* thấp hơn */
       display: flex;
       flex-direction: column;
       position: relative;
@@ -113,8 +113,34 @@
     #chartWrap {
       flex: 1;
       height: 100%;
-      /* min-height: 360px; */
+     min-height: 432px;
     }
+    .page-header {
+  max-width: 1600px;
+  margin: 28px auto 0;
+  padding: 0 24px;
+}
+
+  h1.brand {
+    margin: 0;
+    color: #fff;            /* đảm bảo trắng */
+    font-size: 42px;        /* tuỳ kiểu heading bạn đang dùng */
+    line-height: 1.2;
+  }
+
+  h1.brand a,
+  h1.brand a:visited,
+  h1.brand a:hover,
+  h1.brand a:active,
+  h1.brand a:focus {
+    color: #fff !important;           /* luôn trắng, không đổi sang tím */
+    text-decoration: none !important; /* không gạch chân */
+  }
+
+  h1.brand a:focus-visible {
+    outline: 2px solid #4aa8ff; 
+    outline-offset: 2px;              /* có thể giữ cho accessibility; nếu không muốn, bỏ rule này */
+  }
 
     /* --- Responsive nhỏ (mobile) --- */
     @media (max-width: 900px) {
@@ -133,7 +159,11 @@
   </style>
 </head>
 <body>
-
+  <div class="page-header">
+    <h1 class="brand">
+      <a id="brand-home" href="index.html">CryptoMarketCap</a>
+    </h1>
+  </div>
   <div class="main-container">
     <!-- Bảng thông tin bên trái -->
     <div class="coin-info">
@@ -151,8 +181,9 @@
     <!-- Biểu đồ nhỏ hơn, nằm ngang đầu bảng -->
     <div class="chart-panel">
       <div class="chart-type-switch">
-        <button id="btn-line" class="active">📈 Line</button>
+        <button id="btn-line" class="active">📈 Price</button>
         <button id="btn-candle">🕯️ Candle</button>
+        <button id="btn-line-market-cap">📈 Market Cap</button>
       </div>
       <div id="chartWrap">
         <canvas id="coinChart"></canvas>

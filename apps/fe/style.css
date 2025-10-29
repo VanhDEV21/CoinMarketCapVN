@@ -20,6 +20,26 @@ h1 {
   color: white;
   margin-bottom: 20px;
 }
+h1.brand { margin: 0; }
+
+/* giữ nguyên màu trắng, bỏ gạch chân cho mọi trạng thái */
+h1.brand a,
+h1.brand a:visited {
+  color: #fff;               /* hoặc 'inherit' nếu H1 đã là trắng */
+  text-decoration: none;
+}
+
+h1.brand a:hover,
+h1.brand a:active,
+h1.brand a:focus {
+  text-decoration: none;
+  color: #fff;
+}
+
+/* nếu có rule toàn cục làm link tím/đổi màu, ép mạnh hơn: */
+h1.brand a { color: #fff !important; text-decoration: none !important; }
+
+
 
 /* Bảng */
 table {
@@ -290,6 +310,13 @@ th#th-5m:hover, th#th-1h:hover, th#th-24h:hover { background-color:#3a3a3a; }
 .auth-footer{ margin-top:18px; color:var(--auth-hint); font-size:14px; text-align:center; }
 .auth-footer a{ color:#8ab4f8; text-decoration:none; }
 .auth-footer a:hover{ text-decoration:underline; }
+  .toolbar{display:flex;gap:8px;align-items:center;margin:10px 0 16px;}
+  #search-input{flex:1;max-width:420px;padding:8px 10px;border-radius:8px;border:1px solid #333;background:#121212;color:#fff;outline:none}
+  #search-input::placeholder{color:#8aa}
+  mark { background: #2a3f2e; color: #d8ffe5; padding: 0 .15rem; border-radius: 3px; }
+.up { color: #1ecb73; }
+.down { color: #ff3b57; }
+.empty-hint { text-align:center; opacity:.75; padding: 16px 0; }
 
 /* responsive */
 @media (max-width:420px){
