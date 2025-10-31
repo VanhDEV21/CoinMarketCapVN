@@ -13,98 +13,64 @@ export class CoinRepository {
       .limit(limit);  
   }
 
-  async findHistoryBySymbol(symbol: string, count:number): Promise<ICoin[] | null> {
+  async findHistoryBySymbol(symbol: string): Promise<ICoin[] | null> {
     return Coin.find({ symbol: symbol })
       .select({ currentPrice: 1,volume24h: 1,marketCap: 1, timestamp: 1, version: 1, _id: 0 })
       .sort({ timestamp: -1 })
-      .limit(count)
       .lean();
   }
 
-  async aggregateOHLC(
-    symbol: string,
-    intervalMinutes = 60,
-    limit = 100,
-    to?: Date
-  ) {
-    const sym = symbol.toUpperCase();
-    const intervalMs = intervalMinutes * 60 * 1000;
+ async aggregateOHLC(symbol: string, intervalMinutes = 60, limit?: number, to?: Date) {
+  const sym = symbol;
+  const intervalMs = intervalMinutes * 60_000;
 
-    // lấy timestamp mới nhất để xác định cửa sổ query
-    const lastDoc = await Coin.findOne({ symbol: sym })
-      .sort({ timestamp: -1 })
-      .select({ timestamp: 1 })
+  // lấy mốc cuối
+  const lastDoc = await Coin.findOne({ symbol: sym }).sort({ timestamp: -1 }).select({ timestamp: 1 }).lean();
+  if (!lastDoc) return [];
+  const end = to ? to.getTime() : new Date(lastDoc.timestamp).getTime();
+
+  let docs;
+  if (!Number.isFinite(limit as number) || (limit as number) <= 0) {
+    // 🔁 limit=all -> lấy toàn bộ lịch sử
+    docs = await Coin.find({ symbol: sym })
+      .sort({ timestamp: 1 })
+      .select({ currentPrice: 1, volume24h: 1, timestamp: 1 })
       .lean();
-
-    if (!lastDoc) return [];
-
-    const end = to ? to.getTime() : new Date(lastDoc.timestamp).getTime();
-    const start = end - intervalMs * limit * 3; // query rộng hơn ~3x để đủ dữ liệu gom nhóm
-
-    const docs = await Coin.find({
+  } else {
+    const start = end - intervalMs * (limit as number) * 3;
+    docs = await Coin.find({
       symbol: sym,
       timestamp: { $gte: new Date(start), $lte: new Date(end) },
     })
       .sort({ timestamp: 1 })
       .select({ currentPrice: 1, volume24h: 1, timestamp: 1 })
       .lean();
-
-    if (!docs.length) return [];
-
-    const buckets = new Map<number, {
-      o: number; h: number; l: number; c: number; // price
-      vAgg: number; vCnt: number;                 // volume proxy
-      firstTs: number; lastTs: number;
-    }>();
-
-    for (const d of docs) {
-      const ts = new Date(d.timestamp).getTime();
-      const key = ts - (ts % intervalMs); // ✅ align về mốc thời gian chuẩn
-
-      const cur = buckets.get(key);
-      const price = d.currentPrice;
-      const vol24h = d.volume24h ?? 0;
-
-      if (!cur) {
-        buckets.set(key, {
-          o: price,
-          h: price,
-          l: price,
-          c: price,
-          vAgg: vol24h,
-          vCnt: 1,
-          firstTs: ts,
-          lastTs: ts,
-        });
-      } else {
-        cur.h = Math.max(cur.h, price);
-        cur.l = Math.min(cur.l, price);
-        cur.c = price;
-        cur.vAgg += vol24h;
-        cur.vCnt += 1;
-        cur.lastTs = ts;
-      }
-    }
-
-    // map → array + sort + cắt limit cuối
-    const candles = Array.from(buckets.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([key, b]) => {
-        // proxy volume: average 24h volume scaled by interval
-        const avgVol24h = b.vCnt ? (b.vAgg / b.vCnt) : 0;
-        const volProxy = avgVol24h * (intervalMinutes / 1440);
-        return {
-          t: new Date(key),
-          open: b.o,
-          high: b.h,
-          low:  b.l,
-          close: b.c,
-          volume: volProxy, // proxy
-        };
-      });
-
-    return candles.slice(-limit);
   }
 
+  if (!docs.length) return [];
 
+  // ✅ Phần bucket giữ NGUYÊN logic cũ của bạn
+  const buckets = new Map<number, { o: number; h: number; l: number; c: number; vAgg: number; vCnt: number }>();
+  for (const d of docs) {
+    const ts = new Date(d.timestamp).getTime();
+    const key = ts - (ts % intervalMs); // align theo interval
+    const price = d.currentPrice;
+    const vol24h = d.volume24h ?? 0;
+    const b = buckets.get(key);
+    if (!b) buckets.set(key, { o: price, h: price, l: price, c: price, vAgg: vol24h, vCnt: 1 });
+    else { b.h = Math.max(b.h, price); b.l = Math.min(b.l, price); b.c = price; b.vAgg += vol24h; b.vCnt += 1; }
+  }
+
+  const candles = Array.from(buckets.entries()).sort((a,b)=>a[0]-b[0]).map(([key, b]) => ({
+    t: new Date(key),
+    open: b.o, high: b.h, low: b.l, close: b.c,
+    volume: (b.vCnt ? (b.vAgg / b.vCnt) : 0) * (intervalMinutes / 1440),
+  }));
+
+  if (Number.isFinite(limit as number) && (limit as number) > 0) return candles.slice(-(limit as number));
+  return candles;
+}
+
+
+  
 }

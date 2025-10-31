@@ -1,6 +1,6 @@
 import { CoinService } from '../services/coinServices';
 import {Request, Response} from 'express';
-
+import { getMarketsForSymbol } from "../services/marketService";
 
 export class CoinController {
   private coinService: CoinService;
@@ -33,7 +33,7 @@ export class CoinController {
     public getHistoryBySymbol = async (req: Request, res: Response) => {
     try {
       const symbol = (req.params.symbol || '');
-      const data = await this.coinService.getHistoryBySymbol(symbol, 2016);
+      const data = await this.coinService.getHistoryBySymbol(symbol);
       res.status(200).json(data);
     } catch (error) {
       console.error('Error fetching coin history:', error);
@@ -44,7 +44,17 @@ export class CoinController {
       try {
         const symbol = req.params.symbol;
         const tf = (req.query.tf as string) || req.query.interval || '60';
-        const limit = Number(req.query.limit || 100);
+        let limit: number | undefined;
+        if (req.query.limit === undefined) {
+          limit = undefined;
+        } else {
+          const raw = String(req.query.limit).toLowerCase();
+          if (raw === 'all') limit = undefined;
+          else {
+            const n = Number(raw);
+            limit = Number.isFinite(n) && n > 0 ? n : undefined; // giá trị xấu => ALL
+          }
+        }
 
         const data = await this.coinService.getOHLCFromExistingData(symbol, tf as string, limit);
         res.status(200).json(data);
@@ -53,6 +63,17 @@ export class CoinController {
         res.status(500).json({ error: 'Error fetching OHLC data' });
       }
   };
-
+  async getMarkets(req: Request, res: Response) {
+  try {
+    const symbol = String(req.params.symbol || "");
+    const name = String((req.query.name as string) || "").trim();
+    const limit = Number(req.query.limit || 50);
+    const data = await getMarketsForSymbol(symbol, name, limit);
+    return res.json({ error: false, data });
+  } catch (e: any) {
+    console.error("getMarkets error:", e?.message || e);
+    return res.status(500).json({ error: true, message: "Failed to load markets" });
+  }
+}
 
 }

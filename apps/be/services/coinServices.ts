@@ -105,11 +105,9 @@ export class CoinService {
       throw error; 
     }
   }
-  async getHistoryBySymbol(symbol: string, count = 2016) {
-    const take = Math.min(Number(count) || 2016, 10000);
+  async getHistoryBySymbol(symbol: string) {
 
-    const docs = await this.coinRepo.findHistoryBySymbol(symbol, take);
-    docs.reverse();
+    const docs = await this.coinRepo.findHistoryBySymbol(symbol);
     return docs.map(d => ({
       t: d.timestamp,
       price: d.currentPrice,
@@ -119,7 +117,7 @@ export class CoinService {
     }));
   }
 
-  async getOHLCFromExistingData(symbol: string, tf: string | number = 60, limit = 100) {
+  async getOHLCFromExistingData(symbol: string, tf: string | number = 60, limit : number) {
     const minutes = tfToMinutes(tf);
     return this.coinRepo.aggregateOHLC(symbol, minutes, limit);
   }

@@ -13,159 +13,66 @@
       --muted: #7e8ca3;
       --border: #1a2431;
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       font-family: Inter, system-ui, Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
     }
-
-    /* --- Bố cục chính: Info trái, Chart phải, Chart nhỏ hơn và đẩy lên trên --- */
-    .main-container {
-      display: flex;
-      flex-direction: row;
-      align-items: flex-start; /* đẩy chart lên ngang đầu bảng */
-      gap: 24px;
-      max-width: 1600px;
-      margin: 40px auto;
-      padding: 0 24px;
-      transform: translateX(-120px); /* Dịch sang trái 5cm (khoảng 50px) */
+    .page-header { max-width: 1600px; margin: 28px auto 0; padding: 0 24px; }
+    h1.brand { margin: 0; color: #fff; font-size: 42px; line-height: 1.2; }
+    h1.brand a, h1.brand a:visited, h1.brand a:hover, h1.brand a:active, h1.brand a:focus {
+      color: #fff !important; text-decoration: none !important;
     }
+    h1.brand a:focus-visible { outline: 2px solid #4aa8ff; outline-offset: 2px; }
 
-    /* --- Bảng thông tin coin (bên trái) --- */
+    /* Layout: info left + chart right */
+    .main-container {
+      display: flex; flex-direction: row; align-items: flex-start;
+      gap: 24px; max-width: 1600px; margin: 40px auto; padding: 0 24px;
+      transform: translateX(-120px);
+    }
     .coin-info {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px 22px;
-      width: 408px; /* ✅ tăng từ ~340px → 408px (+20%) */
-      min-width: 380px;
-      box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px 22px;
+      width: 408px; min-width: 380px; box-shadow: 0 4px 20px rgba(0,0,0,.15);
       flex-shrink: 0;
     }
+    .coin-info h2 { margin: 0 0 12px; font-size: 18px; font-weight: 600; color: #fff; }
+    .coin-detail { display: flex; justify-content: space-between; padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06); font-size: 14px; }
+    .coin-detail strong { color: var(--muted); }
+    .meta { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
 
-    .coin-info h2 {
-      margin: 0 0 12px;
-      font-size: 18px;
-      font-weight: 600;
-      color: #fff;
-    }
-
-    .coin-detail {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      font-size: 14px;
-    }
-
-    .coin-detail strong {
-      color: var(--muted);
-    }
-
-    .meta {
-      color: var(--muted);
-      font-size: 13px;
-      margin-bottom: 10px;
-    }
-
-    /* --- Chart Panel (bên phải, nhỏ hơn và đẩy lên ngang đầu bảng) --- */
     .chart-panel {
-      flex: 0 0 72%; /* chỉ chiếm 1 nửa chiều rộng */
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-      min-height: 60vh; /* thấp hơn */
-      display: flex;
-      flex-direction: column;
-      position: relative;
+      flex: 0 0 72%;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px; min-height: 60vh;
+      display: flex; flex-direction: column; position: relative;
     }
-
-    .chart-type-switch {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
+    .chart-type-switch { display: flex; gap: 8px; margin-bottom: 12px; }
     .chart-type-switch button {
-      background: #252b38;
-      border: none;
-      color: #c9d4e5;
-      padding: 6px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.2s;
+      background: #252b38; border: none; color: #c9d4e5;
+      padding: 6px 10px; border-radius: 8px; cursor: pointer; transition: background .2s;
     }
+    .chart-type-switch button.active { background: #38455a; color: #fff; }
+    .chart-type-switch button:hover { background: #303b4c; }
+    #chartWrap { flex: 1; height: 100%; min-height: 432px; }
 
-    .chart-type-switch button.active {
-      background: #38455a;
-      color: #fff;
-    }
-
-    .chart-type-switch button:hover {
-      background: #303b4c;
-    }
-
-    #chartWrap {
-      flex: 1;
-      height: 100%;
-     min-height: 432px;
-    }
-    .page-header {
-  max-width: 1600px;
-  margin: 28px auto 0;
-  padding: 0 24px;
-}
-
-  h1.brand {
-    margin: 0;
-    color: #fff;            /* đảm bảo trắng */
-    font-size: 42px;        /* tuỳ kiểu heading bạn đang dùng */
-    line-height: 1.2;
-  }
-
-  h1.brand a,
-  h1.brand a:visited,
-  h1.brand a:hover,
-  h1.brand a:active,
-  h1.brand a:focus {
-    color: #fff !important;           /* luôn trắng, không đổi sang tím */
-    text-decoration: none !important; /* không gạch chân */
-  }
-
-  h1.brand a:focus-visible {
-    outline: 2px solid #4aa8ff; 
-    outline-offset: 2px;              /* có thể giữ cho accessibility; nếu không muốn, bỏ rule này */
-  }
-
-    /* --- Responsive nhỏ (mobile) --- */
     @media (max-width: 900px) {
-      .main-container {
-        flex-direction: column;
-        align-items: center;
-      }
-      .coin-info {
-        width: 95%;
-      }
-      .chart-panel {
-        width: 95%;
-        flex: 1;
-      }
+      .main-container { flex-direction: column; align-items: center; }
+      .coin-info, .chart-panel { width: 95%; }
     }
   </style>
 </head>
 <body>
   <div class="page-header">
-    <h1 class="brand">
-      <a id="brand-home" href="index.html">CryptoMarketCap</a>
-    </h1>
+    <h1 class="brand"><a id="brand-home" href="index.html">CryptoMarketCap</a></h1>
   </div>
+
   <div class="main-container">
-    <!-- Bảng thông tin bên trái -->
+    <!-- Info left -->
     <div class="coin-info">
       <h2 id="title">Coin Info</h2>
       <div class="meta" id="subtitle">Fetching data...</div>
@@ -178,52 +85,64 @@
       <div class="coin-detail"><strong>FDV:</strong> <span id="fdv">--</span></div>
     </div>
 
-    <!-- Biểu đồ nhỏ hơn, nằm ngang đầu bảng -->
+    <!-- Chart right -->
     <div class="chart-panel">
       <div class="chart-type-switch">
         <button id="btn-line" class="active">📈 Price</button>
         <button id="btn-candle">🕯️ Candle</button>
         <button id="btn-line-market-cap">📈 Market Cap</button>
       </div>
-      <div id="chartWrap">
-        <canvas id="coinChart"></canvas>
-      </div>
+      <div id="chartWrap"><canvas id="coinChart"></canvas></div>
     </div>
   </div>
+  <section id="markets" style="margin-top: 24px;">
+  <h2 style="margin:0 0 8px;">Markets</h2>
+  <div id="markets-loading">Loading markets…</div>
+  <div class="table-scroll" style="overflow:auto;border:1px solid #223; border-radius:8px;">
+    <table id="markets-table" style="width:100%; border-collapse:collapse; min-width:720px;">
+      <thead>
+        <tr style="text-align:left;">
+          <th style="padding:10px;">#</th>
+          <th style="padding:10px;">Exchange</th>
+          <th style="padding:10px;">Pair</th>
+          <th style="padding:10px;">Price (USD)</th>
+          <th style="padding:10px;">Spread</th>
+          <th style="padding:10px;">24h Volume (USD)</th>
+          <th style="padding:10px;">Updated</th>
+          <th style="padding:10px;"></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
 
-<!-- libs -->
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 
-<!-- ✅ financial chart plugin for Chart.js 4 -->
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial/dist/chartjs-chart-financial.min.js"></script>
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 
-<!-- ✅ Register candlestick/ohlc types -->
-<script>
-  // Đăng ký financial controllers/elements
-  const fin = window['chartjs-chart-financial'] || {};
-  const {
-    CandlestickController, CandlestickElement,
-    OhlcController, OhlcElement
-  } = fin;
+  <!-- financial chart plugin for Chart.js 4 -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial/dist/chartjs-chart-financial.min.js"></script>
 
-  // Đăng ký TimeScale & LinearScale (đề phòng build slim)
-  const { TimeScale, LinearScale, CategoryScale, Tooltip, Legend } = Chart;
+  <!-- zoom/pan plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2"></script>
 
-  Chart.register(
-    CandlestickController, CandlestickElement,
-    OhlcController, OhlcElement,
-    TimeScale, LinearScale, CategoryScale, Tooltip, Legend
-  );
+  <!-- Register controllers/elements/plugins -->
+  <script>
+    const fin = window['chartjs-chart-financial'] || {};
+    const { CandlestickController, CandlestickElement, OhlcController, OhlcElement } = fin;
+    const { TimeScale, LinearScale, CategoryScale, Tooltip, Legend } = Chart;
+    Chart.register(
+      CandlestickController, CandlestickElement,
+      OhlcController, OhlcElement,
+      TimeScale, LinearScale, CategoryScale, Tooltip, Legend,
+      window['chartjs-plugin-zoom']
+    );
+  </script>
 
-  // Debug xem scale 'time' đã có chưa
-  // console.log('time scale?', Chart.registry.getScale('time'));
-</script>
-
-<!-- logic -->
-<script src="chart.js"></script>
-
+  <!-- logic -->
+  <script src="chart.js"></script>
 </body>
 </html>
- 

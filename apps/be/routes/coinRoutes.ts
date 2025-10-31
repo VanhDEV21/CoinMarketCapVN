@@ -13,4 +13,6 @@ router.get('/history/:symbol', coinController.getHistoryBySymbol);
 
 router.get('/ohlc/:symbol', coinController.getOHLC);
 
+router.get('/markets/:symbol', coinController.getMarkets);
+
 export default router;

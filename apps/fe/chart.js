@@ -10,7 +10,8 @@
   const subtitleEl = document.getElementById('subtitle');
 
   if (!symbol) { titleEl.textContent = 'Missing symbol'; subtitleEl.textContent = ''; return; }
-  titleEl.textContent = `${name} (${symbol}) — ~7 Days`;
+  titleEl.textContent = `${name} (${symbol}) — First 4 Days (default)`;
+
 
   let chart;
   let rawHistory = { points: [], volumes: [], marketCap: [] };
@@ -23,6 +24,17 @@
     const el = document.getElementById(id);
     if (el) el.classList.add('active');
   }
+  // ƯỚC LƯỢNG KHOẢNG CÁCH THỜI GIAN GIỮA CÁC ĐIỂM (để set minRange)
+  function estimateSpacingMs(arr) {
+    if (!arr || arr.length < 2) return 5 * 60 * 1000; // fallback 5'
+    let min = Infinity;
+    for (let i = 1; i < arr.length; i++) {
+      const d = +arr[i].x - +arr[i - 1].x;
+      if (d > 0 && d < min) min = d;
+    }
+    return Number.isFinite(min) ? min : 5 * 60 * 1000;
+  }
+
   function destroyChart() { if (chart) chart.destroy(); }
 
   // --- coin info (rút gọn)
@@ -59,41 +71,50 @@
   const GREEN = '#1ecb73', RED = '#ff3b57';
   const GRID  = '#1f2a38', TICK = '#7e8ca3';
 
-  function baseOptions({ ySuggestedMin, suggestedMaxVol }) {
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'nearest', intersect: false, axis: 'x' },
-      animation: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#0f1620',
-          borderColor: '#29374a',
-          borderWidth: 1,
-          titleColor: '#c9d4e5',
-          bodyColor: '#e9f0ff',
-          callbacks: {
-            label: (ctx) => {
-              if (ctx.dataset.type === 'bar') {
-                const v = Number(ctx.parsed?.y || 0);
-                return 'Volume ' + new Intl.NumberFormat('en-US', { notation:'compact', maximumFractionDigits:2 }).format(v);
-              }
-              if (ctx.dataset.label === 'Avg') return ' Avg $' + (ctx.parsed?.y ?? 0);
-              return ' $' + (ctx.parsed?.y ?? 0);
+function baseOptions({ ySuggestedMin, suggestedMaxVol }) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false, axis: 'x' },
+    animation: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0f1620',
+        borderColor: '#29374a',
+        borderWidth: 1,
+        titleColor: '#c9d4e5',
+        bodyColor: '#e9f0ff',
+        filter: (item) => item.dataset?.label !== 'Avg', // ẩn dòng Avg cho gọn
+        callbacks: {
+          label: (ctx) => {
+            if (ctx.dataset.type === 'bar') {
+              const v = Number(ctx.parsed?.y || 0);
+              return 'Volume ' + new Intl.NumberFormat('en-US', {
+                notation: 'compact', maximumFractionDigits: 2
+              }).format(v);
             }
+            return ' $' + (ctx.parsed?.y ?? 0);
           }
         }
       },
-      layout: { padding: { left: 10, right: 10 } },
-      elements: { line: { capBezierPoints: true }, point: { hitRadius: 8 } },
-      scales: {
-        x: { type: 'time', time: { unit: 'day', tooltipFormat: 'MMM dd HH:mm' }, grid: { color: GRID }, ticks: { color: TICK } },
-        y: { position: 'right', grid: { color: GRID }, suggestedMin: ySuggestedMin, ticks: { color: TICK, callback: v => '$' + Number(v) } },
-        yVol: { position: 'left', grid: { drawOnChartArea: false }, suggestedMin: 0, suggestedMax: suggestedMaxVol, ticks: { display: false } }
-      }
-    };
-  }
+      decimation: { enabled: true, algorithm: 'lttb', samples: 1000 }
+    },
+    layout: { padding: { left: 10, right: 10 } },
+    elements: { line: { capBezierPoints: true }, point: { hitRadius: 8 } },
+    scales: {
+      x: { type: 'time', time: { unit: 'day', tooltipFormat: 'MMM dd HH:mm' },
+           grid: { color: GRID }, ticks: { color: TICK } },
+      y: { position: 'right', grid: { color: GRID }, suggestedMin: ySuggestedMin,
+           ticks: { color: TICK, callback: v => '$' + Number(v) } },
+      yVol: { position: 'left', grid: { drawOnChartArea: false },
+              suggestedMin: 0, suggestedMax: suggestedMaxVol, ticks: { display: false } }
+    }
+  };
+}
+
+
+
 
   // --- helper: chèn giao điểm với avg để đổi màu mượt
   function injectAvgIntersections(points, avg) {
@@ -114,210 +135,244 @@
   }
 
   // ===== Renderers =====
-  function renderLinePrice(points, volumes) {
-    const prices = points.map(p => p.y);
-    const minP = Math.min(...prices), maxP = Math.max(...prices);
-    const range = Math.max(1e-12, maxP - minP);
-    const avg = prices.reduce((s,v)=>s+v,0)/prices.length;
-    const lastX = points.at(-1).x;
-    const sevenDaysAgo = new Date(+lastX - 7*24*60*60*1000);
+function renderLinePrice(points, volumes) {
+  if (!points?.length) return;
 
-    const ySuggestedMin = minP + range * 0.30;
+  const prices = points.map(p => p.y);
+  const minP = Math.min(...prices), maxP = Math.max(...prices);
+  const range = Math.max(1e-12, maxP - minP);
+  const avg = prices.reduce((s,v)=>s+v,0)/prices.length;
 
-    const VOLUME_HEIGHT_FRAC = 0.12;
-    const maxVol = Math.max(...volumes, 0);
-    const suggestedMaxVol = maxVol > 0 ? (maxVol / VOLUME_HEIGHT_FRAC) : 1;
-    const volColors = volumes.map((_, i) => {
-      if (i === 0) return 'rgba(128,128,128,0.35)';
-      return points[i].y >= points[i - 1].y ? 'rgba(0,200,140,0.38)' : 'rgba(255,70,70,0.38)';
-    });
+  const firstX = points[0].x;
+  const lastX  = points.at(-1).x;
 
-    const injected = injectAvgIntersections(points, avg);
-    const greenGrad = 'rgba(30,203,115,0.12)';
-    const redGrad   = 'rgba(255,59,87,0.12)';
+  const ySuggestedMin = minP + range * 0.30;
 
-    const ctx = document.getElementById('coinChart').getContext('2d');
-    destroyChart();
-    chart = new Chart(ctx, {
-      data: {
-        datasets: [
-          {
-            type: 'bar',
-            label: 'Volume',
-            data: points.map((p, i) => ({ x: p.x, y: volumes[i] })),
-            parsing: false, yAxisID: 'yVol',
-            backgroundColor: volColors, borderWidth: 0,
-            barThickness: Math.max(1, Math.floor(700 / points.length)), maxBarThickness: 4,
-            categoryPercentage: 1, barPercentage: 1, order: 0
+  const VOLUME_HEIGHT_FRAC = 0.12;
+  const maxVol = Math.max(...volumes, 0);
+  const suggestedMaxVol = maxVol > 0 ? (maxVol / VOLUME_HEIGHT_FRAC) : 1;
+  const volColors = volumes.map((_, i) => {
+    if (i === 0) return 'rgba(128,128,128,0.35)';
+    return points[i].y >= points[i - 1].y ? 'rgba(0,200,140,0.38)' : 'rgba(255,70,70,0.38)';
+  });
+
+  const injected = injectAvgIntersections(points, avg);
+  const greenGrad = 'rgba(30,203,115,0.12)';
+  const redGrad   = 'rgba(255,59,87,0.12)';
+
+  const ctx = document.getElementById('coinChart').getContext('2d');
+  destroyChart();
+  chart = new Chart(ctx, {
+    data: {
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Volume',
+          data: points.map((p, i) => ({ x: p.x, y: volumes[i] })),
+          parsing: false, yAxisID: 'yVol',
+          backgroundColor: volColors, borderWidth: 0,
+          barThickness: Math.max(1, Math.floor(700 / points.length)), maxBarThickness: 4,
+          categoryPercentage: 1, barPercentage: 1, order: 0
+        },
+        {
+          type: 'line',
+          label: `${symbol} Price`,
+          data: injected, parsing: false, yAxisID: 'y', spanGaps: true,
+          borderWidth: 2, pointRadius: 0, tension: 0.25,
+          fill: { target: ySuggestedMin },
+          borderColor: GREEN, backgroundColor: greenGrad,
+          segment: {
+            borderColor: ctx => (ctx.p0.parsed.y >= avg && ctx.p1.parsed.y >= avg) ? GREEN : RED,
+            backgroundColor: ctx => (ctx.p0.parsed.y >= avg && ctx.p1.parsed.y >= avg) ? greenGrad : redGrad
           },
-          {
-            type: 'line',
-            label: `${symbol} Price`,
-            data: injected, parsing: false, yAxisID: 'y', spanGaps: true,
-            borderWidth: 2, pointRadius: 0, tension: 0.25,
-            fill: { target: ySuggestedMin },
-            borderColor: GREEN, backgroundColor: greenGrad,
-            segment: {
-              borderColor: ctx => (ctx.p0.parsed.y >= avg && ctx.p1.parsed.y >= avg) ? GREEN : RED,
-              backgroundColor: ctx => (ctx.p0.parsed.y >= avg && ctx.p1.parsed.y >= avg) ? greenGrad : redGrad
-            },
-            order: 2
-          },
-          {
-            type: 'line',
-            label: 'Avg',
-            data: points.map(p => ({ x: p.x, y: avg })),
-            parsing: false, yAxisID: 'y',
-            borderColor: '#9aa7bd', borderDash: [6, 6], borderWidth: 1.5,
-            pointRadius: 0, fill: false, tension: 0, order: 3
-          }
-        ]
-      },
-      options: {
-        ...baseOptions({ ySuggestedMin, suggestedMaxVol }),
-        scales: {
-          ...baseOptions({ ySuggestedMin, suggestedMaxVol }).scales,
-          x: { type: 'time', time: { unit: 'day', tooltipFormat: 'MMM dd HH:mm' },
-               grid: { color: GRID }, ticks: { color: TICK }, min: sevenDaysAgo, max: lastX }
+          order: 2
+        },
+        {
+          type: 'line',
+          label: 'Avg',
+          data: points.map(p => ({ x: p.x, y: avg })),
+          parsing: false, yAxisID: 'y',
+          borderColor: '#9aa7bd', borderDash: [6, 6], borderWidth: 1.5,
+          pointRadius: 0, fill: false, tension: 0, order: 3
+        }
+      ]
+    },
+    options: {
+      ...baseOptions({ ySuggestedMin, suggestedMaxVol }),
+      scales: {
+        ...baseOptions({ ySuggestedMin, suggestedMaxVol }).scales,
+        x: {
+          type: 'time',
+          time: { unit: 'day', tooltipFormat: 'MMM dd HH:mm' },
+          grid: { color: GRID }, ticks: { color: TICK },
+          min: firstX,        // 👈 full lịch sử
+          max: lastX
         }
       }
-    });
-  }
+    }
+  });
+}
 
-  function renderMarketCapChart(points, volumes, marketCap) {
-    const caps = marketCap;
-    if (!caps?.length) return;
 
-    // --- cửa sổ 7 ngày mặc định
-    const lastX = points.at(-1)?.x;
-    const firstX = points[0]?.x;
-    const ONE_DAY = 24 * 60 * 60 * 1000;
-    const minX = new Date(+lastX - 7 * ONE_DAY);
-    const rangeDays = (+lastX - +firstX) / ONE_DAY;
-    const timeUnit = rangeDays <= 2 ? 'hour' : 'day';
 
-    const minC = Math.min(...caps), maxC = Math.max(...caps);
-    const range = Math.max(1e-12, maxC - minC);
 
-    // giữ volume ~12% chiều cao
-    const VOLUME_HEIGHT_FRAC = 0.12;
-    const maxVol = Math.max(...volumes, 0);
-    const suggestedMaxVol = maxVol > 0 ? (maxVol / VOLUME_HEIGHT_FRAC) : 1;
+// === renderMarketCapChart: 4 ngày đầu + minRange theo mật độ điểm
+function renderMarketCapChart(points, volumes, marketCap) {
+  const caps = marketCap;
+  if (!points?.length || !caps?.length) return;
 
-    const volColors = caps.map((_, i) => {
-      if (i === 0) return 'rgba(128,128,128,0.35)';
-      return caps[i] >= caps[i - 1] ? 'rgba(0,200,140,0.35)' : 'rgba(255,70,70,0.35)';
-    });
+  const firstX = points[0].x;
+  const lastX  = points.at(-1).x;
+
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  const rangeDays = (+lastX - +firstX) / ONE_DAY;
+  const timeUnit = rangeDays <= 2 ? 'hour' : 'day';
+
+  const minC = Math.min(...caps), maxC = Math.max(...caps);
+  const range = Math.max(1e-12, maxC - minC);
+
+  const VOLUME_HEIGHT_FRAC = 0.12;
+  const maxVol = Math.max(...volumes, 0);
+  const suggestedMaxVol = maxVol > 0 ? (maxVol / VOLUME_HEIGHT_FRAC) : 1;
+
+  const volColors = caps.map((_, i) => {
+    if (i === 0) return 'rgba(128,128,128,0.35)';
+    return caps[i] >= caps[i - 1] ? 'rgba(0,200,140,0.35)' : 'rgba(255,70,70,0.35)';
+  });
+
+  const ctx = document.getElementById('coinChart').getContext('2d');
+  destroyChart();
+  chart = new Chart(ctx, {
+    data: {
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Volume',
+          data: points.map((p, i) => ({ x: p.x, y: volumes[i] })),
+          parsing: false, yAxisID: 'yVol',
+          backgroundColor: volColors, borderWidth: 0,
+          barThickness: Math.max(1, Math.floor(700 / points.length)), maxBarThickness: 4,
+          categoryPercentage: 1, barPercentage: 1, order: 0
+        },
+        {
+          type: 'line',
+          label: 'Market Cap',
+          data: points.map((p, i) => ({ x: p.x, y: caps[i] })),
+          parsing: false, yAxisID: 'yMC', spanGaps: true,
+          borderWidth: 2, pointRadius: 0, tension: 0.25,
+          fill: true,
+          borderColor: '#4aa8ff', backgroundColor: 'rgba(74,168,255,0.10)',
+          order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false, axis: 'x' },
+      plugins: {
+        legend: { display: true },
+        decimation: { enabled: true, algorithm: 'lttb', samples: 1000 }
+      },
+      // chỉ giữ 2 trục: yMC & yVol
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: timeUnit, tooltipFormat: 'MMM dd HH:mm' },
+          min: firstX,        // 👈 full lịch sử
+          max: lastX,
+          ticks: { color: TICK }, grid: { color: GRID }
+        },
+        yMC: {
+          position: 'right',
+          suggestedMin: minC + range * 0.00,
+          ticks: {
+            color: TICK,
+            callback: v => '$' + new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(v)
+          },
+          grid: { color: GRID }
+        },
+        yVol: {
+          position: 'left',
+          grid: { drawOnChartArea: false },
+          suggestedMin: 0, suggestedMax: suggestedMaxVol,
+          ticks: { display: false }
+        }
+      }
+    }
+  });
+}
+
+
+
+
+async function renderCandle() {
+  try {
+    const { data } = await axios.get(`${API_BASE}/ohlc/${symbol}?limit=all`);
+    if (!data || !data.length) { subtitleEl.textContent = 'No candle data returned from API.'; destroyChart(); return; }
+
+    const candles = data.map(d => ({ x: new Date(d.t || d.timestamp), o: d.open, h: d.high, l: d.low, c: d.close }));
+    const firstX = candles[0].x;
+    const lastX  = candles.at(-1).x;
+
+    const FOUR_DAYS = 4 * 24 * 60 * 60 * 1000;
+    const initMin = firstX;
+    const initMax = new Date(Math.min(+firstX + FOUR_DAYS, +lastX));
+
+    // 👇 cửa sổ tối thiểu ≈ 20 nến
+    const minRangeMs = estimateSpacingMs(candles) * 20;
 
     const ctx = document.getElementById('coinChart').getContext('2d');
     destroyChart();
     chart = new Chart(ctx, {
-      data: {
-        datasets: [
-          {
-            type: 'bar',
-            label: 'Volume',
-            data: points.map((p, i) => ({ x: p.x, y: volumes[i] })),
-            parsing: false, yAxisID: 'yVol',
-            backgroundColor: volColors, borderWidth: 0,
-            barThickness: Math.max(1, Math.floor(700 / points.length)), maxBarThickness: 4,
-            categoryPercentage: 1, barPercentage: 1, order: 0
-          },
-          {
-            type: 'line',
-            label: 'Market Cap',
-            data: points.map((p, i) => ({ x: p.x, y: caps[i] })),
-            parsing: false, yAxisID: 'yMC', spanGaps: true,
-            borderWidth: 2, pointRadius: 0, tension: 0.25,
-            fill: true,
-            borderColor: '#4aa8ff', backgroundColor: 'rgba(74,168,255,0.10)',
-            order: 1
-          }
-        ]
-      },
+      type: 'candlestick',
+      data: { datasets: [{
+        label: `${symbol} OHLC Chart`,
+        data: candles,
+        borderColor: '#1ecb73',
+        color: { up: '#1ecb73', down: '#ff3b57', unchanged: '#7e8ca3' },
+        barThickness: 6, borderWidth: 1.2
+      }]},
       options: {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { mode: 'nearest', intersect: false, axis: 'x' },
-        plugins: { legend: { display: true } },
-        // chỉ giữ 2 trục: yMC & yVol, KHÔNG khai báo 'y' để tránh trục $0–$1
+        responsive: true, maintainAspectRatio: false, aspectRatio: 2,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: 'index', intersect: false, backgroundColor: '#0f1620', borderColor: '#29374a', borderWidth: 1,
+            titleColor: '#c9d4e5', bodyColor: '#e9f0ff',
+            callbacks: { label: ctx => { const d = ctx.raw; return `O:${d.o}  H:${d.h}  L:${d.l}  C:${d.c}`; } }
+          },
+          zoom: {
+            pan:   { enabled: true, mode: 'x' },
+            zoom:  { wheel: { enabled: true, modifierKey: 'ctrl' }, pinch: { enabled: true }, mode: 'x' },
+            limits:{ x: { min: firstX, max: lastX, minRange: minRangeMs } }
+          }
+        },
+        layout: { padding: { left: 8, right: 8, bottom: 14 } },
         scales: {
           x: {
-            type: 'time',
-            time: { unit: timeUnit, tooltipFormat: 'MMM dd HH:mm' },
-            min: minX, max: lastX,
-            ticks: { color: TICK }, grid: { color: GRID }
+            type: 'timeseries',
+            time: { unit: 'hour', stepSize: 1, tooltipFormat: 'MMM dd HH:mm', displayFormats: { hour: 'HH:mm', day: 'MMM dd' } },
+            ticks: { display: true, color: TICK, source: 'data', autoSkip: true, maxTicksLimit: 12, maxRotation: 0, minRotation: 0, padding: 6 },
+            grid: { color: GRID }, offset: false, bounds: 'ticks',
+            min: initMin, max: initMax
           },
-          yMC: {
-            position: 'right',
-            suggestedMin: minC + range * 0.00,
-            ticks: {
-              color: TICK,
-              callback: v => '$' + new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(v)
-            },
-            grid: { color: GRID }
-          },
-          yVol: {
-            position: 'left',
-            grid: { drawOnChartArea: false },
-            suggestedMin: 0, suggestedMax: suggestedMaxVol,
-            ticks: { display: false }
-          }
+          y: { position: 'right', grid: { color: GRID }, ticks: { color: TICK, callback: v => '$' + Number(v).toLocaleString() } }
         }
       }
     });
+
+    const change = ((candles.at(-1).c - candles[0].o) / candles[0].o) * 100;
+    const avg = candles.reduce((s, d) => s + (d.c ?? 0), 0) / candles.length;
+    subtitleEl.textContent = `Candles: ${candles.length} • ${firstX.toLocaleString()} → ${lastX.toLocaleString()} • Δ ${change.toFixed(2)}% • Avg: $${avg.toFixed(2)}`;
+  } catch (err) {
+    console.error('Error loading candle data:', err);
+    subtitleEl.textContent = 'Error loading candle data.';
+    destroyChart();
   }
+}
 
-  // --- render candle
-  async function renderCandle() {
-    try {
-      const { data } = await axios.get(`${API_BASE}/ohlc/${symbol}`);
-      if (!data || !data.length) { subtitleEl.textContent = 'No candle data returned from API.'; return; }
 
-      const candleData = data.map(d => ({ x: new Date(d.t), o: d.open, h: d.high, l: d.low, c: d.close }));
-      const lastDate = new Date(candleData.at(-1).x);
-      const firstDate = new Date(candleData[0].x);
-      const sevenDaysAgo = new Date(lastDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const filtered = candleData.filter(d => d.x >= sevenDaysAgo);
-      const rangeDays = (lastDate - firstDate) / (1000 * 60 * 60 * 24);
-
-      const ctx = document.getElementById('coinChart').getContext('2d');
-      destroyChart();
-      chart = new Chart(ctx, {
-        type: 'candlestick',
-        data: { datasets: [{ label: `${symbol} OHLC Chart`, data: filtered,
-          borderColor: '#1ecb73',
-          color: { up: '#1ecb73', down: '#ff3b57', unchanged: '#7e8ca3' },
-          barThickness: 6, borderWidth: 1.2 }] },
-        options: {
-          responsive: true, maintainAspectRatio: false, aspectRatio: 2,
-          interaction: { mode: 'index', intersect: false },
-          plugins: { legend: { display: false },
-            tooltip: { mode: 'index', intersect: false, backgroundColor: '#0f1620', borderColor: '#29374a', borderWidth: 1,
-              titleColor: '#c9d4e5', bodyColor: '#e9f0ff',
-              callbacks: { label: ctx => { const d = ctx.raw; return `O:${d.o}  H:${d.h}  L:${d.l}  C:${d.c}`; }}} },
-          layout: { padding: { left: 8, right: 8, bottom: 14 } },
-          scales: {
-            x: {
-              type: 'timeseries',
-              time: { unit: rangeDays < 1 ? 'hour' : 'day', stepSize: rangeDays < 1 ? 2 : 1,
-                tooltipFormat: 'MMM dd HH:mm', displayFormats: { hour: 'HH:mm', day: 'MMM dd' } },
-              ticks: { display: true, color: TICK, source: 'data', autoSkip: false, maxRotation: 0, minRotation: 0, padding: 6, maxTicksLimit: 12 },
-              grid: { color: GRID }, offset: false, bounds: 'ticks'
-            },
-            y: { position: 'right', grid: { color: GRID }, ticks: { color: TICK, callback: v => '$' + Number(v).toLocaleString() } }
-          }
-        }
-      });
-
-      const first = filtered[0].x;
-      const avg = filtered.reduce((s, d) => s + (d.c ?? 0), 0) / filtered.length;
-      const change = ((filtered.at(-1).c - filtered[0].o) / filtered[0].o) * 100;
-      subtitleEl.textContent = `Candles: ${filtered.length} • ${first.toLocaleString()} → ${lastDate.toLocaleString()} • Δ ${change.toFixed(2)}% • Avg: $${avg.toFixed(2)}`;
-    } catch (err) {
-      console.error('Error loading candle data:', err);
-      subtitleEl.textContent = 'Error loading candle data.';
-    }
-  }
 
   // ===== smart switch renderer =====
   function renderChart() {
@@ -335,10 +390,75 @@
   document.getElementById('btn-candle').onclick = () => { chartType = 'candle'; renderChart(); setActive('btn-candle'); };
   document.getElementById('btn-line-market-cap').onclick = () => { chartType = 'marketCap'; renderChart(); setActive('btn-line-market-cap'); };
 
+
+  // ===================== Markets table =====================
+
+function fmtUsd(n) {
+  if (n == null || isNaN(n)) return '—';
+  if (n >= 1) return '$' + n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  // số nhỏ < 1: hiển thị nhiều chữ số hơn
+  return '$' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+}
+
+function timeAgo(iso) {
+  if (!iso) return '—';
+  const t = new Date(iso).getTime();
+  const d = Date.now() - t;
+  if (d < 60e3) return 'just now';
+  if (d < 3600e3) return Math.floor(d/60e3) + 'm ago';
+  if (d < 24*3600e3) return Math.floor(d/3600e3) + 'h ago';
+  return new Date(iso).toLocaleString();
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadMarkets(symbol, name) {
+  try {
+    const url = `${API_BASE}/markets/${encodeURIComponent(symbol)}?name=${encodeURIComponent(name)}&limit=50`;
+    const res = await fetch(url);
+    const json = await res.json();
+    const rows = (json && json.data) ? json.data : [];
+    renderMarkets(rows);
+  } catch (e) {
+    console.error('loadMarkets error', e);
+    document.getElementById('markets-loading').textContent = 'Failed to load markets.';
+  }
+}
+
+function renderMarkets(rows) {
+  const tbody = document.querySelector('#markets-table tbody');
+  tbody.innerHTML = '';
+  rows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.style.borderTop = '1px solid #223';
+    tr.innerHTML = `
+      <td style="padding:10px;">${i + 1}</td>
+      <td style="padding:10px;">${escapeHtml(r.exchange)}</td>
+      <td style="padding:10px;">${escapeHtml(r.pair)}</td>
+      <td style="padding:10px;">${fmtUsd(r.price)}</td>
+      <td style="padding:10px;">${r.spread != null ? (r.spread.toFixed(2) + '%') : '—'}</td>
+      <td style="padding:10px;">${fmtUsd(r.volume24h)}</td>
+      <td style="padding:10px;">${r.updatedAt ? timeAgo(r.updatedAt) : '—'}</td>
+      <td style="padding:10px;">${
+        r.tradeUrl ? `<a href="${r.tradeUrl}" target="_blank" rel="noopener">Trade</a>` : ''
+      }</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('markets-loading').style.display = 'none';
+}
+
+// Gọi khi load trang (sau khi bạn đã lấy được symbol & name từ URL)
+loadMarkets(symbol, name);
+
+
   // ===== fetch + initial render =====
   (async function loadAndRender() {
     try {
-      const { data } = await axios.get(`${API_BASE}/history/${symbol}`);
+      // lấy full history; nếu BE chưa hỗ trợ all thì endpoint hiện tại của bạn cũng trả full
+      const { data } = await axios.get(`${API_BASE}/history/${symbol}?count=all`);
       if (!Array.isArray(data) || data.length < 2) { subtitleEl.textContent = 'No/insufficient data returned from API.'; return; }
 
       data.sort((a,b)=>new Date(a.t)-new Date(b.t));
@@ -358,3 +478,5 @@
     }
   })();
 })();
+
+
