@@ -31,7 +31,6 @@ export class CoinRepository {
 
   let docs;
   if (!Number.isFinite(limit as number) || (limit as number) <= 0) {
-    // 🔁 limit=all -> lấy toàn bộ lịch sử
     docs = await Coin.find({ symbol: sym })
       .sort({ timestamp: 1 })
       .select({ currentPrice: 1, volume24h: 1, timestamp: 1 })
@@ -48,12 +47,10 @@ export class CoinRepository {
   }
 
   if (!docs.length) return [];
-
-  // ✅ Phần bucket giữ NGUYÊN logic cũ của bạn
   const buckets = new Map<number, { o: number; h: number; l: number; c: number; vAgg: number; vCnt: number }>();
   for (const d of docs) {
     const ts = new Date(d.timestamp).getTime();
-    const key = ts - (ts % intervalMs); // align theo interval
+    const key = ts - (ts % intervalMs);
     const price = d.currentPrice;
     const vol24h = d.volume24h ?? 0;
     const b = buckets.get(key);

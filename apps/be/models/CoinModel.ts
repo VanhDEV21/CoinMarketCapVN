@@ -22,6 +22,9 @@ const coinSchema = new Schema<ICoin>({
   timestamp: { type: Date, default: Date.now },
   version: {type: Number, required: true},
 });
+coinSchema.index({ symbol: 1, version: 1 });
+coinSchema.index({ symbol: 1, timestamp: 1 });
+coinSchema.index({ version: -1, cmc_rank: 1 });
 const Coin = mongoose.model<ICoin>('Coin', coinSchema);
 
 export default Coin;

@@ -1,7 +1,6 @@
 import { CoinService } from '../services/coinServices';
 import {Request, Response} from 'express';
 import { getMarketsForSymbol } from "../services/marketService";
-
 export class CoinController {
   private coinService: CoinService;
   constructor() {
