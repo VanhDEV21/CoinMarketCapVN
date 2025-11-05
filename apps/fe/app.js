@@ -17,7 +17,97 @@ let allCoinsOriginal = [];   // dữ liệu gốc (để reset sort)
 let allCoinsView     = [];   // dữ liệu render (sau sort)
 let currentPage      = 1;
 
-const isAuthed = !!localStorage.getItem('token');
+// === AUTH + NOTIFICATION STATE ===
+function isLoggedIn() {
+  return !!localStorage.getItem('token');
+}
+
+let notificationsEnabled = (localStorage.getItem('notificationsEnabled') === 'true');
+
+function updateNotificationIcon(enabled) {
+  const btn = document.getElementById('btn-notifications');
+  if (!btn) return;
+  btn.textContent = enabled ? '🔔' : '🔕';
+}
+
+function updateBellVisibility() {
+  const btn = document.getElementById('btn-notifications');
+  if (!btn) return;
+  btn.style.display = isLoggedIn() ? 'inline-block' : 'none';
+  updateNotificationIcon(notificationsEnabled);
+}
+
+function showTgModal() {
+  const modal = document.getElementById('tg-modal');
+  if (modal) modal.style.display = 'block';
+}
+function hideTgModal() {
+  const modal = document.getElementById('tg-modal');
+  if (modal) modal.style.display = 'none';
+}
+document.addEventListener('click', (e) => {
+  if (e.target?.id === 'tg-close') hideTgModal();
+});
+
+// Lấy trạng thái từ BE để đồng bộ icon
+async function refreshNotifStatusFromServer() {
+  if (!isLoggedIn()) return;
+  try {
+    const res = await axios.get('http://localhost:5000/api/notifications/status', {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    });
+    const serverEnabled = !!res.data?.enabled;
+    notificationsEnabled = serverEnabled;
+    localStorage.setItem('notificationsEnabled', String(serverEnabled));
+    updateNotificationIcon(serverEnabled);
+  } catch (e) {
+    // ignore
+  }
+}
+
+// Toggle bật/tắt nhận thông báo
+async function toggleNotifications() {
+  if (!isLoggedIn()) {
+    alert('Please log in first');
+    return;
+  }
+
+  // hỏi status trước để biết đã liên kết chưa
+  let hasChat = false;
+  try {
+    const s = await axios.get('http://localhost:5000/api/notifications/status', {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    });
+    hasChat = !!s.data?.hasChat;
+  } catch {}
+
+  // Nếu đang muốn bật mà chưa có chatId -> mở modal QR và dừng
+  if (!notificationsEnabled && !hasChat) {
+    showTgModal();
+    return;
+  }
+
+  // Cho phép bật/tắt
+  const newStatus = !notificationsEnabled;
+  try {
+    const res = await axios.post(
+      'http://localhost:5000/api/notifications/toggle',
+      { enabled: newStatus },
+      { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } }
+    );
+    notificationsEnabled = !!res.data?.enabled;
+    localStorage.setItem('notificationsEnabled', String(notificationsEnabled));
+    updateNotificationIcon(notificationsEnabled);
+  } catch (e) {
+    // nếu BE trả 409 needLink thì cũng mở modal
+    if (e?.response?.status === 409) {
+      showTgModal();
+    } else {
+      alert('Failed to update notification preferences');
+    }
+  }
+}
+
 let watchlistSet = new Set();
 
 let viewMode = 'all'; // 'all' | 'watch'
@@ -102,7 +192,7 @@ function cycleSort(key) {
 
 /** ============== WATCHLIST API ============== */
 async function loadWatchlist() {
-  if (!isAuthed) { watchlistSet = new Set(); return; }
+  if (!isLoggedIn()) { watchlistSet = new Set(); return; }
   try {
     const res = await axios.get(WATCH.GET);
     const symbols = (res.data?.items || []).map(i => i.symbol);
@@ -114,7 +204,7 @@ async function loadWatchlist() {
 }
 
 async function toggleWatch(symbol) {
-  if (!isAuthed) {
+  if (!isLoggedIn()) {
     const hint = document.getElementById('login-hint');
     if (hint) hint.style.display = 'block';
     return;
@@ -369,12 +459,14 @@ function bindSorting() {
 }
 
 /** ============== INIT ============== */
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async() => {
   bindTableEvents();
   bindTabs();
   bindSorting();
   bindSearch()
   updateSortHeaderUI();
+  updateBellVisibility(); 
+  await refreshNotifStatusFromServer();
   fetchTopCoins();
   setInterval(fetchTopCoins, 60 * 1000);
 });

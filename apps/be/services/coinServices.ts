@@ -123,3 +123,15 @@ export class CoinService {
   }
   
 }
+export async function getCoinDetails(symbol: string) {
+  try {
+    const coin = await Coin.findOne({ symbol }).lean();
+    if (!coin) {
+      throw new Error(`Coin with symbol ${symbol} not found.`);
+    }
+    return coin;
+  } catch (error) {
+    console.error('Error fetching coin details:', error);
+    throw error;
+  }
+}

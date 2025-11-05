@@ -317,6 +317,7 @@ th#th-5m:hover, th#th-1h:hover, th#th-24h:hover { background-color:#3a3a3a; }
 .up { color: #1ecb73; }
 .down { color: #ff3b57; }
 .empty-hint { text-align:center; opacity:.75; padding: 16px 0; }
+#btn-notifications { margin-right: 8px; font-size: 18px; line-height: 1; }
 
 /* responsive */
 @media (max-width:420px){

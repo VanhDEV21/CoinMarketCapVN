@@ -4,4 +4,6 @@ export interface IUser extends Document {
     passwordHash: string;
     role: 'user' | 'admin';
     createdAt: Date;
+    telegramChatId: number,
+    notificationsEnabled: Boolean, 
 }

@@ -1,5 +1,10 @@
 // ===== chart.js (Line + Avg + Volume + Candle + MarketCap) =====
 (function () {
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/apps/fe/sw.js')
+      .catch(console.error);
+  }
   const API_BASE = 'http://localhost:5000/api/coins';
 
   // --- query + DOM
@@ -10,7 +15,7 @@
   const subtitleEl = document.getElementById('subtitle');
 
   if (!symbol) { titleEl.textContent = 'Missing symbol'; subtitleEl.textContent = ''; return; }
-  titleEl.textContent = `${name} (${symbol}) — First 4 Days (default)`;
+  titleEl.textContent = `${name} (${symbol})`;
 
 
   let chart;
@@ -452,7 +457,7 @@ function renderMarkets(rows) {
 
 // Gọi khi load trang (sau khi bạn đã lấy được symbol & name từ URL)
 loadMarkets(symbol, name);
-
+setInterval(() => loadMarkets(symbol, name), 60 * 1000);
 
   // ===== fetch + initial render =====
   (async function loadAndRender() {

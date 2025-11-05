@@ -8,6 +8,8 @@ const UserShema = new Schema<IUser>({
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     createdAt: { type: Date, default: Date.now },
+    telegramChatId: { type: Number, unique: true, sparse: true },
+    notificationsEnabled: { type: Boolean, default: true }, 
 });
 
 export default model<IUser>('User', UserShema);
