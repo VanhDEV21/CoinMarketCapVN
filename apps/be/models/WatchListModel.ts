@@ -13,6 +13,5 @@ const WatchlistSchema = new Schema<IWatchlist>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-WatchlistSchema.index({ userId: 1 }); // tối ưu query theo user
 
 export default model<IWatchlist>('Watchlist', WatchlistSchema, 'user_watchlists');

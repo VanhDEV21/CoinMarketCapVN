@@ -3,6 +3,7 @@
     "@sendgrid/mail": "^8.1.6",
     "axios": "^1.13.1",
     "bcryptjs": "^3.0.2",
+    "bottleneck": "^2.19.5",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
@@ -29,7 +30,7 @@
     "build": "tsc",
     "start": "concurrently \"yarn be\" \"yarn fe\"",
     "be": "node dist/server.js",
-    "fe": "http-server . -p 8192"
+    "fe": "http-server . -p 8193"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",

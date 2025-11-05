@@ -6,8 +6,9 @@ import cors from 'cors';
 import axios from 'axios';
 import { maybeAuth } from './middlewares/maybeAuth';
 import watchlistRoutes from './routes/watchListRoute';
-import notifyRoutes from './routes/notifycationRoutes';
+import notificationRoutes from './routes/notificationRoutes';
 import { startTelegramBot } from './bots/telegramBot';
+import cron from 'node-cron';
 const app: Application = express();
 
 app.use(express.json()); 
@@ -18,7 +19,7 @@ connectToDatabase();
 app.use('/api/coins', maybeAuth, coinRoutes);
 app.use('/api/auth',  authRoutes); 
 app.use('/api/watchlist', watchlistRoutes);
-app.use('/api/notifications', notifyRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 async function fetchAndStoreCoins() {
   axios.get('http://localhost:5000/api/coins/fetch-and-store')
@@ -29,13 +30,25 @@ async function fetchAndStoreCoins() {
       console.error('Error fetching and storing coins:', error);
     });
 }
+async function getNotifications(){
+  await axios.post('http://localhost:5000/api/notifications/send-notifications', {}, {
+  headers: { 'x-cron-key': process.env.CRON_KEY || 'dev_cron_key' }
+});
+
+}
 
 fetchAndStoreCoins();
 
-setInterval(() => {
+cron.schedule('*/5 * * * *', () => {
   fetchAndStoreCoins();
-}, 5 * 60 * 1000);
+}, { timezone: 'Asia/Bangkok' });
 startTelegramBot();
+
+cron.schedule('0 7 * * *', () => {
+  void getNotifications();
+}, { timezone: 'Asia/Bangkok' });
+
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

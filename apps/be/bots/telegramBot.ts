@@ -80,3 +80,4 @@ export function startTelegramBot() {
   bot.launch();
   console.log('Telegram bot started');
 }
+export { bot };
