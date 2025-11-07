@@ -98,7 +98,7 @@ export class CoinService {
   }
   async getTopCoins(): Promise<ICoin[]> {
     try {
-      const topCoins = await this.coinRepo.findTopCoins(100);
+      const topCoins = await this.coinRepo.findTopCoins(200);
       return topCoins;
     } catch (error) {
       console.error('Error fetching top coins:', error);

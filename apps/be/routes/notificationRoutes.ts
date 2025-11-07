@@ -7,6 +7,9 @@ const router = express.Router();
 const notificationsController = new NotificationsController();
 
 router.post('/toggle', requireAuth, notificationsController.toggleNotifications);
+
 router.get('/status', requireAuth, notificationsController.getStatus);
+
 router.post('/send-notifications',requireCronKey, notificationsController.sendNotifications);
+
 export default router;

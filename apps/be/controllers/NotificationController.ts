@@ -84,7 +84,7 @@ export class NotificationsController {
         .lean();
 
       const coinBySymbol = new Map<string, typeof latestCoins[number]>(
-        latestCoins.map(c => [c.symbol.toUpperCase(), c])
+        latestCoins.map(c => [c.symbol, c])
       );
 
       // 3) Lấy user đủ điều kiện bằng cursor để không ngốn RAM
