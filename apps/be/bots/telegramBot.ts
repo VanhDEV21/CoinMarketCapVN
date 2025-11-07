@@ -16,7 +16,7 @@ const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 // ===== Session
 bot.use(session());
 
-// ===== Helpers cho /predict
+// ===== Helpers
 function fmtPrice(n: number) {
   if (!Number.isFinite(n)) return String(n);
   const digits = n >= 1 ? 2 : n >= 0.01 ? 4 : 8;
@@ -26,99 +26,157 @@ function confidenceText(yhat: number, lo: number, hi: number) {
   const conf = yhat ? 1 - (hi - lo) / Math.max(yhat, 1e-9) : 0.5;
   return conf >= 0.66 ? 'cao' : conf >= 0.5 ? 'trung bình' : 'thấp';
 }
-function parsePredictArgs(txt: string): { symbol: string; h: Horizon } | null {
-  if (!txt?.startsWith("/predict")) return null;
-
-  // "/predict BTC 5m"
-  const parts = txt.trim().split(/\s+/); // ["/predict","BTC","5m"?]
-  if (parts.length >= 2) {
-    const symbol = parts[1];
-    const hRaw = (parts[2]?.toLowerCase() ?? "1h") as Horizon;
-    const h: Horizon = (hRaw === "5m" || hRaw === "24h" || hRaw === "1h") ? hRaw : "1h";
-    return { symbol, h };
-  }
-
-  // "/predictBTC" hoặc "/predicteth 24h"
-  const m = txt.match(/^\/predict([A-Za-z0-9._-]{2,15})(?:\s+(5m|1h|24h))?$/i);
-  if (m && m[1]) {
-    const symbol = m[1];
-    const h = (m[2]?.toLowerCase() as Horizon) ?? "1h";
-    return { symbol, h };
-  }
-  return null;
+function escRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// ===== /start — liên kết email (giữ nguyên logic của bạn)
+/**
+ * Parse lệnh:
+ *  - /predict BTC
+ *  - /predict BTC 5m
+ *  - /predict bitcoin
+ *  - /predict "bitcoin cash" 1h
+ *  - /predict bitcoin-cash 24h  (dấu - hoặc _ sẽ được hiểu là khoảng trắng)
+ *  - /predictBTC [5m|1h|24h]   (giữ tương thích)
+ */
+function parsePredictArgs(txt: string): { query: string; h: Horizon } | null {
+  if (!txt?.startsWith('/predict')) return null;
+
+  // Trường hợp /predictBTC ... (dính liền symbol) vẫn giữ hỗ trợ
+  const compact = txt.match(/^\/predict([A-Za-z0-9._-]{2,15})(?:\s+(5m|1h|24h))?$/i);
+  if (compact?.[1]) {
+    const symbol = compact[1];
+    const h = (compact[2]?.toLowerCase() as Horizon) ?? '1h';
+    return { query: symbol, h };
+  }
+
+  // Trường hợp chuẩn: "/predict <query> [h]"
+  const tokens = txt.trim().split(/\s+/); // ["/predict", ...args]
+  if (tokens.length < 2) return null;
+
+  let args = tokens.slice(1); // [...query, maybe horizon]
+  let h: Horizon = '1h';
+  const last = args[args.length - 1]?.toLowerCase();
+  if (last === '5m' || last === '1h' || last === '24h') {
+    h = last as Horizon;
+    args = args.slice(0, -1);
+  }
+
+  // Ghép lại phần query (có thể là tên có khoảng trắng)
+  let raw = args.join(' ');
+  // bỏ cặp "..." nếu có
+  raw = raw.replace(/^"(.*)"$/, '$1');
+  // chuyển -/_ thành khoảng trắng để match tên
+  raw = raw.replace(/[-_]+/g, ' ').trim();
+
+  if (!raw) return null;
+  return { query: raw, h };
+}
+
+/**
+ * Resolve từ input (symbol hoặc tên) -> document coin mới nhất.
+ * Ưu tiên:
+ *  1) exact symbol (case-insensitive)
+ *  2) exact name (case-insensitive)
+ *  3) partial name (i, contains)
+ */
+async function resolveCoin(query: string) {
+  const symbol = query;
+
+  // 1) Symbol khớp
+  let coin = await Coin.findOne({ symbol }).sort({ version: -1 }).lean();
+  if (coin) return coin;
+
+  // 2) Tên khớp tuyệt đối (case-insensitive)
+  coin = await Coin.findOne({ name: new RegExp(`^${escRegex(query)}$`, 'i') })
+    .sort({ version: -1 })
+    .lean();
+  if (coin) return coin;
+
+  // 3) Tên chứa chuỗi (partial, case-insensitive) — ưu tiên rank cao / version mới
+  coin = await Coin.findOne({ name: new RegExp(escRegex(query), 'i') })
+    .sort({ cmc_rank: 1, version: -1 }) // ưu tiên coin top
+    .lean();
+
+  return coin;
+}
+
+// ===== /start — liên kết email (giữ logic cũ)
 bot.start(async (ctx: any) => {
   if (!ctx.session) ctx.session = {};
   await ctx.reply('Chào bạn! Để liên kết tài khoản với bot, vui lòng cung cấp email của bạn.');
   ctx.session.state = 'waitingForEmail';
 });
 
-// ===== /predict — hỗ trợ 5m|1h|24h
+// ===== /predict — hỗ trợ symbol hoặc tên + 5m|1h|24h
 bot.command('predict', async (ctx: any) => {
   const args = parsePredictArgs(ctx.message?.text || '');
   if (!args) {
-    return ctx.reply('Cách dùng: `/predict BTC [5m|1h|24h]` hoặc `/predictBTC [5m|1h|24h]`', { parse_mode: 'Markdown' });
+    return ctx.reply(
+      'Cách dùng: `/predict <symbol|tên-coin> [5m|1h|24h]`\n' +
+      'Ví dụ: `/predict BTC`, `/predict bitcoin`, `/predict "bitcoin cash" 24h`',
+      { parse_mode: 'Markdown' }
+    );
   }
-  await handlePredictCommand(ctx, args.symbol, args.h);
+  await handlePredictCommand(ctx, args.query, args.h);
 });
 
-// Dạng dính liền: "/predictBTC [5m|1h|24h]"
+// Giữ tương thích dạng dính liền: /predictBTC [5m|1h|24h]
 bot.hears(/^\/predict([A-Za-z0-9._-]{2,15})(?:\s+(5m|1h|24h))?$/i, async (ctx: any) => {
   const args = parsePredictArgs(ctx.message?.text || '');
   if (!args) {
-    return ctx.reply('Cách dùng: `/predict BTC [5m|1h|24h]` hoặc `/predictBTC [5m|1h|24h]`', { parse_mode: 'Markdown' });
+    return ctx.reply(
+      'Cách dùng: `/predict <symbol|tên-coin> [5m|1h|24h]`',
+      { parse_mode: 'Markdown' }
+    );
   }
-  await handlePredictCommand(ctx, args.symbol, args.h);
+  await handlePredictCommand(ctx, args.query, args.h);
 });
 
-async function handlePredictCommand(ctx: any, symbol: string, h: Horizon = "1h") {
+async function handlePredictCommand(ctx: any, query: string, h: Horizon = '1h') {
   try {
-    // 1) Kiểm tra coin có dữ liệu trong DB
-    const coin = await Coin.findOne({ symbol: symbol})
-      .sort({ version: -1 })
-      .select({ currentPrice: 1, percentChange1h: 1, percentChange24h: 1 })
-      .lean();
-
+    const coin = await resolveCoin(query);
     if (!coin) {
-      await ctx.reply(`❗ Không tìm thấy dữ liệu cho coin: ${symbol}.Hãy thử lại với coin có trong danh sách có marketcap cao nhất nhé `);
+      await ctx.reply(`❗ Không tìm thấy dữ liệu trong DB cho: ${query}`);
       return;
     }
 
-    await ctx.reply(`⏳ Đang phân tích *${symbol}* (${h}) ...`, { parse_mode: 'Markdown' });
+    const symbol = coin.symbol;
+    const name = coin.name || symbol;
 
-    // 2) Gọi AI đúng horizon
+    await ctx.reply(`⏳ Đang phân tích *${name}* (${symbol}, ${h}) ...`, { parse_mode: 'Markdown' });
+
     const p = await getPrediction(symbol, h);
     if (!p?.ok) {
       await ctx.reply('⚠️ Chưa lấy được dự đoán từ AI. Thử lại sau.');
       return;
     }
 
-    // 3) Format kết quả
-    const price = coin.currentPrice != null ? `$${fmtPrice(coin.currentPrice)}` : 'N/A';
+    const price = coin.currentPrice != null ? `$${fmtPrice(coin.currentPrice)}`
+                 : (p.yhat ? `$${fmtPrice(p.yhat)}` : 'N/A');
     const pct1h =
       coin.percentChange1h != null
-        ? `${coin.percentChange1h >= 0 ? '🟢' : '🔻'} ${coin.percentChange1h}%`
+        ? `${coin.percentChange1h >= 0 ? '🟢' : '🔻'} ${coin.percentChange1h.toFixed(2)}%`
         : 'N/A';
     const pct24h =
       coin.percentChange24h != null
-        ? `${coin.percentChange24h >= 0 ? '🟢' : '🔻'} ${coin.percentChange24h}%`
+        ? `${coin.percentChange24h >= 0 ? '🟢' : '🔻'} ${coin.percentChange24h.toFixed(2)}%`
         : 'N/A';
 
     const lines: string[] = [];
-    lines.push(`*${symbol} — Dự báo AI (${h})*`);
+    lines.push(`*${name}* (${symbol}) — *Dự báo AI* (${h})`);
     lines.push(`Giá hiện tại: *${price}*  •  1h: ${pct1h}  •  24h: ${pct24h}`);
     lines.push(
       `Mục tiêu ~ *$${fmtPrice(p.yhat)}* ` +
-      `(biên $${fmtPrice(p.yhat_lower)} – $${fmtPrice(p.yhat_upper)}; độ tin cậy ${confidenceText(p.yhat, p.yhat_lower, p.yhat_upper)})`
+      `(biên $${fmtPrice(p.yhat_lower)} – $${fmtPrice(p.yhat_upper)}; ` +
+      `độ tin cậy ${confidenceText(p.yhat, p.yhat_lower, p.yhat_upper)})`
     );
 
     const f = p.features || {};
     const feats: string[] = [];
-    if (Number.isFinite(f.rsi)) feats.push(`RSI ${f.rsi}`);
-    if (Number.isFinite(f.macd)) feats.push(`MACD ${f.macd}`);
-    if (Number.isFinite(f.bb_pos)) feats.push(`BBpos ${(f.bb_pos * 100)}%`);
+    if (Number.isFinite(f.rsi)) feats.push(`RSI ${f.rsi.toFixed(1)}`);
+    if (Number.isFinite(f.macd)) feats.push(`MACD ${f.macd.toFixed(2)}`);
+    if (Number.isFinite(f.bb_pos)) feats.push(`BBpos ${(f.bb_pos * 100).toFixed(0)}%`);
     if (feats.length) lines.push(`   ↳ Chỉ báo: ${feats.join(' · ')}`);
 
     lines.push(`\n*Lưu ý:* Đây *không* phải khuyến nghị đầu tư.`);
@@ -128,37 +186,31 @@ async function handlePredictCommand(ctx: any, symbol: string, h: Horizon = "1h")
   }
 }
 
-// ===== Handler text: giữ logic email của bạn, tránh đè lên lệnh
+// ===== Handler text: giữ logic email, tránh đè lên command
 bot.on('text', async (ctx: any) => {
   const userId = ctx.from?.id;
   const text = ctx.message?.text || '';
 
-  // Bỏ qua nếu là command
   if (text.startsWith('/predict') || text.startsWith('/start')) return;
-
   if (!userId || !text) return;
 
   if (ctx.session?.state === 'waitingForEmail') {
     if (!isValidEmail(text)) {
       return ctx.reply('Email không hợp lệ. Vui lòng gửi lại một email hợp lệ.');
     }
-
     const existingUser = await UserModel.findOne({ email: text }).lean();
-
     if (existingUser) {
       await linkUserTelegramAccount(existingUser, userId);
-      await ctx.reply('Tài khoản của bạn đã được liên kết với bot. Bạn nhớ bật thông báo trên web để nhận được thông báo từ mình nhé 😊');
+      await ctx.reply('Tài khoản của bạn đã được liên kết với bot. Bạn sẽ nhận được thông báo từ bot sau này.');
     } else {
       await ctx.reply('Email này chưa được đăng ký trong hệ thống. Vui lòng đăng ký tài khoản trước khi sử dụng bot.');
       ctx.session.state = 'finished';
       await ctx.reply('Chúc bạn một ngày tốt lành!');
     }
-
     ctx.session.state = 'finished';
   }
 });
 
-// ===== Link Telegram chatId vào User
 async function linkUserTelegramAccount(user: any, chatId: number) {
   const u = await UserModel.findById(user._id);
   if (!u) return;
@@ -166,16 +218,14 @@ async function linkUserTelegramAccount(user: any, chatId: number) {
   console.log(`Liên kết tài khoản Telegram với email ${user.email}`);
 }
 
-// ===== Validate email
 function isValidEmail(email: string): boolean {
   const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
   return emailRegex.test(email);
 }
 
-// ===== Khởi động bot
 export function startTelegramBot() {
   bot.telegram.setMyCommands([
-    { command: 'predict', description: 'Dự đoán: /predict BTC [5m|1h|24h]' },
+    { command: 'predict', description: 'Dự đoán: /predict <symbol|tên-coin> [5m|1h|24h]' },
   ]);
   bot.launch();
   console.log('Telegram bot started');
