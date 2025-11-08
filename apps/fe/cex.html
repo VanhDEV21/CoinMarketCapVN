@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CryptoMarketCap</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .wrap { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+    .heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .muted { opacity:.8; }
+    table.ex-table { width:100%; border-collapse: collapse; }
+    table.ex-table th, table.ex-table td { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06); }
+    table.ex-table th { text-align:left; font-weight:800; opacity:.9; }
+    .ex-name { display:flex; align-items:center; gap:10px; }
+    .ex-name img { width:22px; height:22px; border-radius:50%; }
+    .badge { padding:2px 8px; border-radius:999px; font-size:12px; font-weight:800; }
+    .badge.ok { background:#142316; color:#4cd964; }
+    .badge.mid { background:#262113; color:#ffcf5a; }
+    .badge.low { background:#2a1a1a; color:#ff6b6b; }
+    .num { text-align:right; font-variant-numeric: tabular-nums; }
+    .toolbar { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 16px; }
+    .toolbar input, .toolbar select { background:#171d2e; color:#e8efff; border:1px solid rgba(255,255,255,.1); padding:8px 10px; border-radius:10px; }
+    .ext-link { color:#8ab4f8; text-decoration:none; font-weight:700; }
+    .ext-link:hover { color:#bcd3ff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="heading">
+      <h1 style="margin:0"><a href="index.html" class="ext-link">CryptoMarketCap</a></h1>
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="Search exchange..." />
+        <select id="minTrust">
+          <option value="8" selected>Trust ≥ 8</option>
+          <option value="9">Trust ≥ 9</option>
+          <option value="10">Trust = 10</option>
+        </select>
+      </div>
+    </div>
+
+    <table class="ex-table" id="ex-table">
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>Sàn giao dịch</th>
+          <th style="width:120px">Trust Score</th>
+          <th class="num" style="width:200px">Trade Volume 24h BTC</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody id="ex-body">
+        <!-- rows -->
+      </tbody>
+    </table>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="cex.js"></script>
+</body>
+</html>

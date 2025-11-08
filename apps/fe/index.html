@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crypto Market</title>
+  <title>CryptoMarketCap</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="favicon.ico" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
@@ -14,9 +14,11 @@
     <div class="header">
       <h1 class="brand">
         <a id="brand-home" href="index.html">CryptoMarketCap</a>
+        <a class="cmc-link" href="cex.html">CEX</a>
+        <a class="cmc-link" href="dex.html">DEX</a>
       </h1>
+      
     <div class="auth-actions">
-      <button id="btn-overview" onclick="location.href='overview.html'">Market Overview</button>
       <button id="btn-notifications" onclick="toggleNotifications()" title="Turn notifications on/off" style="display:none;">🔔</button>
       <button id="btn-login"  style="display:none;" onclick="location.href='login.html'">Login</button>
       <button id="btn-logout" style="display:none;" onclick="logout()">Logout</button>

@@ -11,5 +11,7 @@ const UserShema = new Schema<IUser>({
     telegramChatId: { type: Number, unique: true, sparse: true },
     notificationsEnabled: { type: Boolean, default: true }, 
 });
-UserShema.index({ notificationsEnabled: 1, telegramChatId: 1 }, { partialFilterExpression: { telegramChatId: { $exists: true } } });
+UserShema.index(
+    { notificationsEnabled: 1, telegramChatId: 1 }, 
+    { partialFilterExpression: { telegramChatId: { $exists: true } } });
 export default model<IUser>('User', UserShema);

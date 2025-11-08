@@ -1,6 +1,6 @@
 # main.py — AI phân tích & dự đoán coin (FastAPI)
 # Mongo URI cố định như yêu cầu: mongodb://127.0.0.1:27017/coinmarketappCMC
-
+from ai_models import make_features, train_and_predict_kstep
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
@@ -80,36 +80,42 @@ def bollinger_position(series: np.ndarray, window: int = 20, n_std: float = 2.0)
     return pos.to_numpy()
 
 
-# ====== Load dữ liệu coin từ Mongo (30 ngày gần nhất) ======
-def load_series(symbol: str, days: int = 30) -> pd.DataFrame:
-    since = datetime.now(timezone.utc) - timedelta(days=days)
-    cur = coins_col.find(
-        {"symbol": symbol, "timestamp": {"$gte": since}},
-        {
-            "_id": 0,
-            "timestamp": 1,
-            "currentPrice": 1,
-            "volume24h": 1,
-            "percentChange1h": 1,
-            "percentChange24h": 1,
-            "percentChange7d": 1,
-            "marketCap": 1,
-            "cmc_rank": 1,
-        },
-    ).sort("timestamp", 1)
-    rows = list(cur)
-    if not rows:
-        return pd.DataFrame()
-    df = pd.DataFrame(rows)
-    df.rename(columns={"timestamp": "ds", "currentPrice": "y"}, inplace=True)
-    df["ds"] = pd.to_datetime(df["ds"], utc=True)
+def load_series(symbol: str, days_candidates: list[int]) -> tuple[pd.DataFrame, int]:
+    """
+    Thử lần lượt các cửa sổ ngày (ví dụ [30,14,7,3,1]) cho đến khi có dữ liệu.
+    Trả về (df, used_days). df rỗng nếu hoàn toàn không có dữ liệu.
+    """
+    symbol = symbol.upper()
+    for d in days_candidates:
+        since = datetime.now(timezone.utc) - timedelta(days=d)
+        cur = coins_col.find(
+            {"symbol": symbol, "timestamp": {"$gte": since}},
+            {
+                "_id": 0,
+                "timestamp": 1,
+                "currentPrice": 1,
+                "volume24h": 1,
+                "percentChange1h": 1,
+                "percentChange24h": 1,
+                "percentChange7d": 1,
+                "marketCap": 1,
+                "cmc_rank": 1,
+            },
+        ).sort("timestamp", 1)
+        rows = list(cur)
+        if rows:
+            df = pd.DataFrame(rows)
+            df.rename(columns={"timestamp": "ds", "currentPrice": "y"}, inplace=True)
+            df["ds"] = pd.to_datetime(df["ds"], utc=True)
 
-    # tính chỉ báo
-    y = df["y"].to_numpy(dtype=float)
-    df["rsi"] = rsi(y, 14)
-    df["macd"] = macd_line(y, 12, 26)
-    df["bb_pos"] = bollinger_position(y, 20, 2.0)
-    return df
+            # tính chỉ báo
+            y = df["y"].to_numpy(dtype=float)
+            df["rsi"]   = rsi(y, 14)
+            df["macd"]  = macd_line(y, 12, 26)
+            df["bb_pos"] = bollinger_position(y, 20, 2.0)
+            return df, d
+    # không có dữ liệu cho bất kỳ cửa sổ nào
+    return pd.DataFrame(), 0
 
 
 # ====== Forecast nhẹ: drift trên log-return + khoảng tin cậy theo volatility ======
@@ -179,37 +185,86 @@ def health():
 
 @app.get("/predict/{symbol}")
 def predict(symbol: str, h: str = "1h"):
+    symbol = symbol
     horizon_minutes = HORIZON_MAP.get(h, 60)
+    steps = max(1, round(horizon_minutes / 5))  # 5m ~ 1 step, 1h ~ 12, 24h ~ 288
 
-    # 1) load dữ liệu
-    df = load_series(symbol, days=30)
+    # 1) chọn cửa sổ ngày theo thứ tự ưu tiên
+    days_candidates = [30, 15, 7, 3, 1]
+    df, used_days = load_series(symbol, days_candidates)
+
     if df.empty:
         return JSONResponse(
-            {"ok": False, "symbol": symbol, "horizon": h, "yhat": 0.0, "yhat_lower": 0.0, "yhat_upper": 0.0, "features": {}},
+            {
+                "ok": False,
+                "symbol": symbol,
+                "horizon": h,
+                "reason": "no_history",
+                "yhat": 0.0, "yhat_lower": 0.0, "yhat_upper": 0.0,
+                "features": {}, "data_points": 0, "window_days": 0
+            },
             status_code=200,
         )
 
-    # 2) forecast
-    fc = forecast_symbol(df, horizon_minutes)
+    # 2) yêu cầu số điểm tối thiểu theo horizon (ước lượng)
+    # giả định 1 điểm ≈ 5 phút
+    # - 5m: cần ~200 điểm (~17h)
+    # - 1h: cần ~600 điểm (~50h ~ 2 ngày)
+    # - 24h: cần ~150 điểm (~12.5h) — dài hạn nên yêu cầu thấp hơn để vẫn chạy
+    min_points_map = {"5m": 200, "1h": 600, "24h": 150}
+    min_points = min_points_map.get(h, 300)
+
+    n_points = len(df)
+    limited = False
+    if n_points < min_points:
+        # không đủ nhiều điểm → đánh dấu limited để bot biết giải thích
+        limited = True
+
+    # 3) Forecast (ML trước, drift sau)
+    from ai_models import train_and_predict_kstep  # import tại chỗ để chắc chắn file tồn tại
+    fc = None
+    model_name = None
+
+    # chỉ chạy ML nếu có tối thiểu ~100 điểm (để train/val còn ý nghĩa)
+    if n_points >= max(100, steps + 60):
+        fc = train_and_predict_kstep(df, steps)
+        model_name = "gbr-kstep:v1" if fc else None
+
     if not fc:
-        return JSONResponse(
-            {"ok": False, "symbol": symbol, "horizon": h, "yhat": 0.0, "yhat_lower": 0.0, "yhat_upper": 0.0, "features": {}},
-            status_code=200,
-        )
+        # Fallback: drift/volatility (EWMA)
+        fc = forecast_symbol(df, horizon_minutes)
+        model_name = "light-ewma:v1" if fc else None
 
-    # 3) lấy features cuối kỳ để trả về
+    if not fc:
+        # Fallback cuối: giữ nguyên giá hiện tại + biên an toàn 2%
+        y_now = float(df["y"].iloc[-1])
+        band = 0.02
+        fc = {"yhat": y_now, "yhat_lower": y_now*(1-band), "yhat_upper": y_now*(1+band)}
+        model_name = "baseline:flat±2%"
+
+    # 4) Features cuối kỳ
     features: Dict[str, float] = {}
     for k in ["rsi", "macd", "bb_pos"]:
         v = df[k].iloc[-1] if k in df.columns else np.nan
         if not np.isnan(v):
             features[k] = float(v)
 
-    # 4) upsert kết quả cho (symbol,horizon)
+    # 5) upsert kết quả cho (symbol,horizon)
     base_ts = df["ds"].iloc[-1].to_pydatetime()
-    upsert_prediction(symbol, h, base_ts, fc, features)
+    upsert_prediction(symbol, h, base_ts, fc, features)  # nếu bạn đã thêm tham số model_name trong upsert thì truyền thêm
 
-    # 5) trả JSON
-    payload = {"ok": True, "symbol": symbol, "horizon": h, **fc, "features": features}
+    # 6) trả JSON + chèn thông tin dữ liệu có hạn
+    payload = {
+        "ok": True,
+        "symbol": symbol,
+        "horizon": h,
+        **fc,
+        "features": features,
+        "model": model_name,
+        "data_points": n_points,
+        "window_days": used_days,
+        "note": "limited_history" if limited else "ok"
+    }
     return JSONResponse(payload, status_code=200)
 
 @app.get("/batch")

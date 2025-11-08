@@ -4,6 +4,8 @@ import coinRoutes from './routes/coinRoutes';
 import authRoutes from './routes/authRoute';
 import watchlistRoutes from './routes/watchListRoute';
 import notificationRoutes from './routes/notificationRoutes';
+import CEXRoutes from "./routes/CEXRoutes";
+import DEXRoutes from "./routes/DEXRoutes";
 import aiRoute from './routes/aiRoute';
 import cors from 'cors';
 import axios from 'axios';
@@ -24,6 +26,8 @@ app.use('/api/auth',  authRoutes);
 app.use('/api/watchlist', watchlistRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/ai', aiRoute);
+app.use("/api/exchanges", CEXRoutes);
+app.use("/api/dex", DEXRoutes);
 async function fetchAndStoreCoins() {
   axios.get('http://localhost:5000/api/coins/fetch-and-store')
     .then(response => {

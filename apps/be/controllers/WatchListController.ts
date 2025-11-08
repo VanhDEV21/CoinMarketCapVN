@@ -75,7 +75,10 @@ public addToWatchlist = async (req: Request, res: Response) => {
       const userId = new mongoose.Types.ObjectId(uid);
       const wl = await Watchlist.findOne({ userId });
       if (!wl) {
-        const created = await Watchlist.create({ userId, items: [{ symbol: symbolRaw, addedAt: new Date() }], updatedAt: new Date() });
+        const created = await Watchlist.create({ 
+          userId,
+          items: [{ symbol: symbolRaw, addedAt: new Date() }], 
+          updatedAt: new Date() });
         return res.json({ ok: true, items: created.items });
       }
       const exists = wl.items.some(i => i.symbol === symbolRaw);

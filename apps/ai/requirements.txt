@@ -1,4 +1,5 @@
 fastapi
+scikit-learn
 uvicorn
 pymongo
 pandas
