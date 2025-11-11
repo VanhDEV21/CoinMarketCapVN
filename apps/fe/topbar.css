@@ -1,0 +1,88 @@
+:root{
+  --topbar-h: 56px;
+  --bg: rgba(16,18,27,.65);
+  --bg-solid: #0f1220;
+  --border: rgba(255,255,255,.08);
+  --text: #e9ecf1;
+  --muted: #a9b0be;
+  --accent: #4fc3f7;
+}
+
+html,body{ margin:0; }
+body{ padding-top: var(--topbar-h); } /* tránh nội dung bị che */
+
+.topbar{
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--topbar-h);
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar .inner{
+  max-width: 2200px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand{
+  display:flex; align-items:center; gap:10px;
+  color: var(--text); text-decoration: none; font-weight: 700;
+  
+  letter-spacing: .2px;
+}
+.brand .logo{
+  width:22px; height:22px; display:inline-grid; place-items:center;
+  border-radius: 6px; border: 1px solid var(--border);
+}
+
+.nav{
+  display:flex; align-items:center; gap: 6px;
+  margin-left: 10px;
+}
+.nav a{
+  display:inline-flex; align-items:center;
+  height: 34px; padding: 0 12px; border-radius: 10px;
+  color: var(--muted); text-decoration: none; font-size: 14px;
+  border: 1px solid transparent;
+}
+.nav a:hover{ color: var(--text); background: rgba(255,255,255,.04); }
+.nav a.active{
+  color: var(--text);
+  border-color: rgba(79,195,247,.25);
+  background: rgba(79,195,247,.08);
+}
+
+.spacer{ flex: 1 1 auto; }
+
+.actions{ display:flex; align-items:center; gap:8px; }
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  height: 34px; padding: 0 12px; border-radius: 10px;
+  background: rgba(255,255,255,.06);
+  color: var(--text); text-decoration:none; font-size: 14px;
+  border: 1px solid var(--border); cursor:pointer;
+}
+.btn:hover{ background: rgba(255,255,255,.10); }
+
+.hamburger{
+  display:none; width:34px; height:34px; border-radius:10px;
+  border:1px solid var(--border); background: transparent; color: var(--text);
+}
+.hamburger .bar{ width:16px; height:2px; background: var(--text); display:block; margin:3px auto; }
+
+@media (max-width: 900px){
+  .nav{ display:none; position: absolute; top: var(--topbar-h); left:0; right:0;
+        background: var(--bg-solid); padding: 8px; border-bottom: 1px solid var(--border); }
+  .nav.open{ display:flex; flex-direction: column; gap:6px; }
+  .hamburger{ display:inline-grid; place-items:center; }
+}
+

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Coin Chart — 7 Days</title>
+  <title>CryptoMarketCap</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
@@ -66,12 +66,10 @@
     }
   </style>
   <link rel="stylesheet" href="./modern-dark.css" />
-
+  <link rel="stylesheet" href="topbar.css" />
 </head>
 <body>
-  <div class="page-header">
-    <h1 class="brand"><a id="brand-home" href="index.html">CryptoMarketCap</a></h1>
-  </div>
+  <div id="topbar-root"></div>
 
   <div class="main-container">
     <!-- Info left -->
@@ -146,5 +144,18 @@
 
   <!-- logic -->
   <script src="chart.js"></script>
+    <script src="topbar.js"></script>
+  <script>
+    Topbar.mount('#topbar-root', {
+      brand: { text: 'CRYPTOMARKETCAP', href: 'index.html' },
+      items: [
+        { text: 'Home', href: 'index.html' },
+        { text: 'CEX',  href: 'cex.html' },
+        { text: 'DEX',  href: 'dex.html' }
+      ],
+      auth: { loginHref: 'login.html' },
+      bot:  { href: 'https://t.me/CRYPTOANNOUCEBOT' }
+    });
+  </script>
 </body>
 </html>

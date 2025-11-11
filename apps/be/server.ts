@@ -27,9 +27,9 @@ app.use('/api/watchlist', watchlistRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/ai', aiRoute);
 app.use("/api/exchanges", CEXRoutes);
-app.use("/api/dex", DEXRoutes);
+app.use('/api/dex', DEXRoutes);
 async function fetchAndStoreCoins() {
-  axios.get('http://localhost:5000/api/coins/fetch-and-store')
+  return axios.get('http://localhost:5000/api/coins/fetch-and-store')
     .then(response => {
       console.log('API fetch-and-store success:', response.data);
     })
@@ -37,54 +37,56 @@ async function fetchAndStoreCoins() {
       console.error('Error fetching and storing coins:', error);
     });
 }
+
 async function getNotifications(){
-  try {
-    const res = await axios.post(
-      'http://localhost:5000/api/notifications/send-notifications',
-      {},
-      { headers: { 'x-cron-key': process.env.CRON_KEY || 'dev_cron_key' } }
-    );
-    console.log('[watchlist] success:', res.status, res.data);
-  } catch (err: any) {
-    console.error('[watchlist] FAILED',
-      err?.response?.status,
-      err?.response?.data || err?.message || err
-    );
-  }
+  // TRẢ VỀ promise của axios
+  return axios.post('http://localhost:5000/api/notifications/send-notifications', {})
+    .then(res => console.log('[watchlist] success:', res.status, res.data))
+    .catch(err => console.error('[watchlist] FAILED', err?.response?.status, err?.response?.data || err?.message || err));
 }
-fetchAndStoreCoins();
-cron.schedule('*/5 * * * *', async() => {
-  await fetchAndStoreCoins();
-  await checkCoinChangesAndNotifyEmergency();
-}, { timezone: 'Asia/Bangkok' });
-
 startTelegramBot();
+
+let isFetchRunning =  false;
+let isNotifRunning = false;
+
+
+cron.schedule('*/5 * * * *', async () => {
+  const th = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+  console.log('[CRON */5] tick', th.toISOString());
+
+  if (isFetchRunning) return console.warn('[CRON */5] skipped (fetch running)');
+  isFetchRunning = true;
+  try {
+    await fetchAndStoreCoins();
+    await checkCoinChangesAndNotifyEmergency();
+  } catch (e) {
+    console.error('[CRON */5] error', e);
+  } finally {
+    isFetchRunning = false;
+  }
+}, { timezone: 'Asia/Bangkok' });
+
 // 7:01 AM everyday
-cron.schedule('1 7 * * *', async() => {
-  console.log('Cron job running at:', new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
-  await getNotifications();
-}, { timezone: 'Asia/Bangkok' });
-// 11 AM every day
-cron.schedule('0 11 * * *', async() => {
-  console.log('Sending notifications at 11 AM...');
-  await getNotifications();
+cron.schedule('1 7 * * *', async () => {
+  const th = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+  console.log('[CRON 07:01] tick', th.toISOString());
+
+  if (isNotifRunning) return console.warn('[CRON 07:01] skipped (notif running)');
+  isNotifRunning = true;
+  try {
+    await getNotifications();
+  } catch (e) {
+    console.error('[CRON 07:01] error', e);
+  } finally {
+    isNotifRunning = false;
+  }
 }, { timezone: 'Asia/Bangkok' });
 
-// 12 PM (noon) every day
-cron.schedule('0 12 * * *', async() => {
-  console.log('Sending notifications at 12 PM...');
-  await getNotifications();
-}, { timezone: 'Asia/Bangkok' });
-
-// 2 PM every day
-cron.schedule('0 14 * * *', async() => {
-  console.log('Sending notifications at 2 PM...');
-  await getNotifications();
-}, { timezone: 'Asia/Bangkok' });
 cron.schedule('30 12 * * *', async () => {
   try {
     const r = await pruneOldByVersion();
     console.log('[pruneByVersion]', r);
+    return r;
   } catch (e) {
     console.error('[pruneByVersion] failed:', e);
   }

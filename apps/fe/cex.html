@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>CryptoMarketCap</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="topbar.css" />
   <style>
     .wrap { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
     .heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -26,9 +27,9 @@
   </style>
 </head>
 <body>
+  <div id="topbar-root"></div>
   <div class="wrap">
     <div class="heading">
-      <h1 style="margin:0"><a href="index.html" class="ext-link">CryptoMarketCap</a></h1>
       <div class="toolbar">
         <input id="q" type="search" placeholder="Search exchange..." />
         <select id="minTrust">
@@ -57,5 +58,18 @@
 
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="cex.js"></script>
+    <script src="topbar.js"></script>
+  <script>
+    Topbar.mount('#topbar-root', {
+      brand: { text: 'CRYPTOMARKETCAP', href: 'index.html' },
+      items: [
+        { text: 'Home', href: 'index.html' },
+        { text: 'CEX',  href: 'cex.html' },
+        { text: 'DEX',  href: 'dex.html' }
+      ],
+      auth: { loginHref: 'login.html' },
+      bot:  { href: 'https://t.me/CRYPTOANNOUCEBOT' }
+    });
+  </script>
 </body>
 </html>

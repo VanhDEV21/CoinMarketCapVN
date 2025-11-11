@@ -4,34 +4,88 @@
 <head>
   <meta charset="UTF-8" />
   <title>DEX Explorer</title>
-  <link rel="stylesheet" href="./modern-dark.css" />
-  <link rel="stylesheet" href="./style.css" />
+
+  <link rel="stylesheet" href="./dex.css" />
+  <link rel="stylesheet" href="topbar.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>DEX Explorer</h1>
+  <div id="topbar-root"></div>
+  <div class="page">
+    <header class="header">
+      <div class="title">
+        <span class="dot"></span>
+        <h1>DEX Explorer</h1>
+      </div>
+      <div class="toolbar">
+        <label class="label">Network</label>
+        <select id="netSelect" class="select"></select>
+        <button id="backBtn" class="btn ghost" style="display:none">← Back</button>
+      </div>
+    </header>
 
-    <div class="toolbar">
-      <label for="networkSelect">Network:</label>
-      <select id="networkSelect"></select>
-    </div>
+    <main class="content">
+      <!-- DEX LIST -->
+      <section id="dexSection" class="card">
+        <div class="card-head">
+          <h2>Exchanges</h2>
+          <small class="muted">Top Dexes by network</small>
+        </div>
+        <div class="table-wrap">
+          <table id="dexTable" class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Exchange</th>
+                <th>Network</th>
+                <th># Pools</th>
+                <th class="right">Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
 
-    <table class="table">
-      <thead>
-        <tr>
-          <th style="width:60px">#</th>
-          <th>Exchange</th>
-          <th>Network</th>
-          <th># Pools / Pairs</th>
-          <th>24h Volume (USD)</th>
-          <th>% Market Share (24h)</th>
-          <th>Link</th>
-        </tr>
-      </thead>
-      <tbody id="dexTbody"></tbody>
-    </table>
+      <!-- POOLS -->
+      <section id="poolSection" class="card" style="display:none">
+        <div class="card-head">
+          <h2 id="poolTitle">Pools</h2>
+          <small class="muted">Top pools</small>
+        </div>
+        <div class="table-wrap">
+          <table id="poolTable" class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Pool</th>
+                <th>Address</th>
+                <th class="right">Vol 24h (USD)</th>
+                <th class="right">Reserve (USD)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
   </div>
+
+  <div id="toast" class="toast" role="alert"></div>
+
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="dex.js"></script>
+    <script src="topbar.js"></script>
+  <script>
+    Topbar.mount('#topbar-root', {
+      brand: { text: 'CRYPTOMARKETCAP', href: 'index.html' },
+      items: [
+        { text: 'Home', href: 'index.html' },
+        { text: 'CEX',  href: 'cex.html' },
+        { text: 'DEX',  href: 'dex.html' }
+      ],
+      auth: { loginHref: 'login.html' },
+      bot:  { href: 'https://t.me/CRYPTOANNOUCEBOT' }
+    });
+  </script>
 </body>
 </html>

@@ -30,7 +30,7 @@
     "build": "tsc",
     "start": "concurrently \"yarn be\" \"yarn fe\"",
     "be": "node dist/server.js",
-    "fe": "http-server . -p 8199"
+    "fe": "http-server . -p 8205"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",
