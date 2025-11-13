@@ -219,17 +219,82 @@ th#th-5m:hover, th#th-1h:hover, th#th-24h:hover { background-color:#3a3a3a; }
 #pagination button { min-width: 34px; }
 /* ========= AUTH PAGES (login/register) ========= */
 :root{
-  --auth-card-bg:#1b1d25;
-  --auth-card-border:#2a2e3b;
-  --auth-shadow:0 8px 25px rgba(0,0,0,.35);
-  --auth-input-bg:#10131b;
-  --auth-input-border:#2e3242;
-  --auth-input-ring:#4f83ff;
-  --auth-hint:#a3acc2;
-  --auth-btn:#3a7bfd;
-  --auth-btn-hover:#2f69da;
+  --dx-bg:#0f1422;
+  --dx-panel:#141b2d;
+  --dx-panel-2:#101624;
+  --dx-line:rgba(255,255,255,.06);
+  --dx-line-2:rgba(255,255,255,.08);
+  --dx-fg:#e9eeff;
+  --dx-brand:#3a7bfd;
+  --dx-good:#1ecb73;
+  --dx-bad:#ff3b57;
+}
+/* nền & màu tổng thể kiểu DEX */
+.dex-skin{
+  background:
+    radial-gradient(1200px 500px at 20% -10%, rgba(58,123,253,.12), transparent),
+    radial-gradient(900px 420px at 95% 0%, rgba(30,203,115,.09), transparent),
+    var(--dx-bg);
+  color: var(--dx-fg);
 }
 
+/* toolbar + tabs */
+.dex-skin .toolbar input{
+  border:1px solid var(--dx-line-2); background:#111827; color:var(--dx-fg);
+  border-radius:10px; padding:8px 10px;
+}
+.dex-skin .tabs{ display:flex; gap:8px; margin:6px 0 10px; }
+.dex-skin .tab{
+  background:var(--dx-panel); border:1px solid var(--dx-line-2); color:var(--dx-fg);
+  padding:6px 12px; border-radius:10px; cursor:pointer; transition:.15s;
+}
+.dex-skin .tab:hover{ background:#1a2236; }
+.dex-skin .tab.active{ background:var(--dx-brand); border-color:var(--dx-brand); color:#fff; font-weight:700; }
+
+/* card shell bao quanh bảng */
+.dex-card-shell{
+  background: linear-gradient(180deg, rgba(255,255,255,.02), transparent 30%), var(--dx-panel);
+  border:1px solid var(--dx-line-2);
+  border-radius:14px;
+  box-shadow: 0 12px 28px rgba(0,0,0,.35);
+  overflow:hidden;
+}
+
+/* header bảng */
+.dex-skin #coin-table thead th{
+  background: linear-gradient(180deg, rgba(255,255,255,.03), transparent 80%), var(--dx-panel-2);
+  color:#dfe6ff;
+  border-bottom:1px solid var(--dx-line);
+  /* không đổi font-size/padding hiện có */
+}
+
+/* body: đường kẻ & hover */
+.dex-skin #coin-table tbody td{ border-bottom:1px solid var(--dx-line); }
+.dex-skin #coin-table tbody tr:hover{ background: rgba(255,255,255,.035); }
+
+/* cột sort hover */
+.dex-skin #th-5m, .dex-skin #th-1h, .dex-skin #th-24h{ cursor:pointer; user-select:none; }
+.dex-skin #th-5m:hover, .dex-skin #th-1h:hover, .dex-skin #th-24h:hover{ background:#1a2236; }
+
+/* màu tăng/giảm */
+.dex-skin .up{ color: var(--dx-good); font-weight:700; }
+.dex-skin .down{ color: var(--dx-bad); font-weight:700; }
+
+/* phân trang */
+.dex-skin .pager{ text-align:center; margin:18px 0; }
+.dex-skin .pager button{
+  min-width:34px; background:var(--dx-panel); color:var(--dx-fg);
+  border:1px solid var(--dx-line-2); padding:6px 10px; border-radius:8px; margin:0 4px;
+}
+.dex-skin .pager button:hover{ background:#1a2236; }
+.dex-skin .pager button.active{ background:var(--dx-brand); border-color:var(--dx-brand); color:#fff; font-weight:700; }
+
+/* hint login & tên coin */
+.dex-skin #login-hint{
+  display:none; margin:10px 0 6px; padding:10px 12px;
+  border:1px dashed var(--dx-line-2); border-radius:10px; color:#ffcf7a; background:#131a2a;
+}
+.dex-skin #coin-table td:nth-child(2){ color:#fff; font-weight:700; }
 /* bố cục giữa màn hình */
 .auth-wrap{
   min-height:100vh;
@@ -246,6 +311,14 @@ th#th-5m:hover, th#th-1h:hover, th#th-24h:hover { background-color:#3a3a3a; }
   border-radius:14px;
   padding:32px 36px;
   box-shadow: var(--auth-shadow);
+}
+.auth-form .btn:hover {
+  background: #4f83ff;
+  box-shadow: 0 0 12px rgba(79,131,255,0.4);
+}
+.input:focus {
+  border-color: #3a7bfd;
+  box-shadow: inset 0 0 8px rgba(58,123,253,0.25);
 }
 
 /* tiêu đề & mô tả */

@@ -92,6 +92,35 @@ cron.schedule('30 12 * * *', async () => {
   }
 }, { timezone: 'Asia/Bangkok' });
 
+cron.schedule('2 14 * * *', async () => {
+  const th = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+  console.log('[CRON 14:02] tick', th.toISOString());
+
+  if (isNotifRunning) return console.warn('[CRON 07:01] skipped (notif running)');
+  isNotifRunning = true;
+  try {
+    await getNotifications();
+  } catch (e) {
+    console.error('[CRON 14:02] error', e);
+  } finally {
+    isNotifRunning = false;
+  }
+}, { timezone: 'Asia/Bangkok' });
+cron.schedule('3 12 * * *', async () => {
+  const th = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+  console.log('[CRON 12:03] tick', th.toISOString());
+
+  if (isNotifRunning) return console.warn('[CRON 07:01] skipped (notif running)');
+  isNotifRunning = true;
+  try {
+    await getNotifications();
+  } catch (e) {
+    console.error('[CRON 12:03] error', e);
+  } finally {
+    isNotifRunning = false;
+  }
+}, { timezone: 'Asia/Bangkok' });
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

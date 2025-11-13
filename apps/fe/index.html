@@ -18,13 +18,12 @@
 <body>
   <!-- Mount point cho thanh bar (đặt ngay sau <body>) -->
   <div id="topbar-root"></div>
-
-  <div class="container">
-
-    <div class="toolbar">
-      <input id="search-input" type="text" placeholder="Search by name or symbol..." />
-      <!-- Nếu muốn đưa nút chuông lên topbar, bảo mình để mình nhúng vào topbar luôn nhé -->
-      <button id="btn-notifications" onclick="toggleNotifications()" title="Turn notifications on/off" style="display:none;">🔔</button>
+  <div class="wrap dex-skin">
+    <div class="heading">
+      <div class="toolbar">
+        <input id="search-input" type="text" placeholder="Search by name or symbol..." />
+        <button id="btn-notifications" onclick="toggleNotifications()" title="Turn notifications on/off" style="display:none;">🔔</button>
+      </div>
     </div>
 
     <div id="login-hint">Please <a href="login.html">login</a> to use Watchlist.</div>
@@ -34,27 +33,26 @@
       <button id="tab-watch" class="tab">Watchlist ★</button>
     </div>
 
-    <table id="coin-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Name</th>
-          <th>Price</th>
-          <th id="th-5m" style="cursor: pointer;">5m %</th>
-          <th id="th-1h" style="cursor: pointer;">1h %</th>
-          <th id="th-24h" style="cursor: pointer;">24h %</th>
-          <th>Volume 24h</th>
-          <th>Market Cap</th>
-        </tr>
-      </thead>
-      <tbody id="coin-table-body">
-        <!-- Dữ liệu sẽ được chèn vào đây từ API -->
-      </tbody>
-    </table>
-
-    <div id="pagination" style="text-align:center; margin:20px 0;">
-      <!-- Pagination buttons sẽ được render ở đây -->
+    <!-- khung card kiểu DEX -->
+    <div class="dex-card-shell">
+      <table id="coin-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Price</th>
+            <th id="th-5m">5m %</th>
+            <th id="th-1h">1h %</th>
+            <th id="th-24h">24h %</th>
+            <th>Volume 24h</th>
+            <th>Market Cap</th>
+          </tr>
+        </thead>
+        <tbody id="coin-table-body"></tbody>
+      </table>
     </div>
+
+    <div id="pagination" class="pager"></div>
   </div>
 
   <div id="chart-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);">

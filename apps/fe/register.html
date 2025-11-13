@@ -6,8 +6,8 @@
   <title>Register</title>
 
   <!-- CSS chính của bạn -->
-  <link rel="stylesheet" href="style.css"/>
-
+  <link rel="stylesheet" href="login.css"/>
+  <link rel="stylesheet" href="topbar.css" />
   <!-- (nhỏ) style cho nút 👁 -->
   <style>
     .pw-field { position: relative; }
@@ -22,6 +22,7 @@
   </style>
 </head>
 <body>
+  <div id="topbar-root"></div>
   <div class="auth-wrap">
     <div class="auth-card">
       <h2 class="auth-title">Create account</h2>
@@ -105,6 +106,19 @@
       } catch (err) {
         msg.textContent = err?.response?.data?.message || 'Register failed';
       }
+    });
+  </script>
+    <script src="topbar.js"></script>
+  <script>
+    Topbar.mount('#topbar-root', {
+      brand: { text: 'CRYPTOMARKETCAP', href: 'index.html' },
+      items: [
+        { text: 'Home', href: 'index.html' },
+        { text: 'CEX',  href: 'cex.html' },
+        { text: 'DEX',  href: 'dex.html' }
+      ],
+      auth: { loginHref: 'login.html' },
+      bot:  { href: 'https://t.me/CRYPTOANNOUCEBOT' }
     });
   </script>
 </body>

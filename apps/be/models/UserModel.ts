@@ -9,7 +9,7 @@ const UserShema = new Schema<IUser>({
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     createdAt: { type: Date, default: Date.now },
     telegramChatId: { type: Number, unique: true, sparse: true },
-    notificationsEnabled: { type: Boolean, default: true }, 
+    notificationsEnabled: { type: Boolean, default: false }, 
 });
 UserShema.index(
     { notificationsEnabled: 1, telegramChatId: 1 }, 

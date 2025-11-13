@@ -1,18 +1,18 @@
 // apps/be/bots/telegramBot.ts
 import { Telegraf } from 'telegraf';
 import { session } from 'telegraf';
-
+import https from 'https';
 import UserModel from '../models/UserModel';
 import Coin from '../models/CoinModel';
 import { getPrediction } from '../services/aiClient';
 
 type Horizon = "5m" | "1h" | "24h";
-
+const agent = new https.Agent({ keepAlive: true, timeout: 20_000 });
 // ====== Cấu hình ======
 const TELEGRAM_BOT_TOKEN =
   process.env.TELEGRAM_BOT_TOKEN ?? '8291089808:AAHuFVAXlyJ2U1BrUjpzS1Qb_J6PIjpbVwA';
 
-const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
+const bot = new Telegraf(TELEGRAM_BOT_TOKEN,{telegram: { agent }});
 
 // ===== Session
 bot.use(session());

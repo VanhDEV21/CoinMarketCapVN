@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Login</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="topbar.css" />
   <style>
     .auth-card{max-width:420px;margin:8vh auto;padding:24px;border-radius:12px;background:#1e1e1e;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.25)}
     .auth-card h2{margin:0 0 16px}
@@ -50,6 +51,19 @@
       }catch(err){
         msg.textContent=err?.response?.data?.message || 'Login failed';
       }
+    });
+  </script>
+    <script src="topbar.js"></script>
+  <script>
+    Topbar.mount('#topbar-root', {
+      brand: { text: 'CRYPTOMARKETCAP', href: 'index.html' },
+      items: [
+        { text: 'Home', href: 'index.html' },
+        { text: 'CEX',  href: 'cex.html' },
+        { text: 'DEX',  href: 'dex.html' }
+      ],
+      auth: { loginHref: 'login.html' },
+      bot:  { href: 'https://t.me/CRYPTOANNOUCEBOT' }
     });
   </script>
 </body>

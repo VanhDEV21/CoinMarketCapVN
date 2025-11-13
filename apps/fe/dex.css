@@ -6,7 +6,7 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0; background:linear-gradient(180deg,var(--bg),#0a0d13 60%); color:var(--text); font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter}
-.page{max-width:1080px; margin:0 auto; padding:24px}
+.page{max-width:1160px; margin:0 auto; padding:24px}
 
 .header{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px}
 .title{display:flex; align-items:center; gap:10px}
@@ -22,6 +22,10 @@ h1{font-size:20px; margin:0}
 }
 .select:focus{border-color:var(--primary); box-shadow:0 0 0 3px #4cc9f033}
 
+.search{display:flex; align-items:center; gap:8px; background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:6px 10px; min-width:240px}
+.search input{border:none; outline:none; background:transparent; color:var(--text); width:180px}
+.search svg{color:var(--muted)}
+
 .btn{
   padding:8px 12px; border-radius:10px; border:1px solid var(--border);
   background:var(--panel-2); color:var(--text); cursor:pointer;
@@ -36,7 +40,7 @@ h1{font-size:20px; margin:0}
 .muted{color:var(--muted)}
 
 .table-wrap{overflow:auto}
-.table{width:100%; border-collapse:collapse; min-width:720px}
+.table{width:100%; border-collapse:collapse; min-width:860px}
 .table thead th{
   position:sticky; top:0; background:var(--panel); z-index:1; font-weight:600; color:#cbd5e1;
   border-bottom:1px solid var(--border); padding:10px 12px; text-align:left;
@@ -61,3 +65,28 @@ h1{font-size:20px; margin:0}
   color:#e6edff; padding:10px 14px; border-radius:12px; box-shadow:0 10px 30px #0009; opacity:0; transform:translateY(8px); pointer-events:none; transition:.2s;
 }
 .toast.show{opacity:1; transform:translateY(0)}
+
+/* Drawer */
+.drawer{
+  position:fixed; top:0; right:-960px;
+  width:960px;                 /* từ 720px -> 960px */
+  max-width:95vw;              /* nới tới 95% màn hình */
+  height:100vh;
+  background:linear-gradient(180deg,var(--panel),#0f1420);
+  border-left:1px solid var(--border);
+  box-shadow:-16px 0 60px #0008;
+  transition:transform .25s ease, right .25s ease;
+  z-index:60; display:flex; flex-direction:column
+}
+.drawer.open{ right:0 }
+
+/* Bảng trong drawer dễ nhìn hơn */
+.drawer .table{ min-width:1000px }      /* tăng min-width */
+.drawer .table thead th,
+.drawer .table tbody td{ padding:14px } /* hàng cao hơn */
+
+.drawer.open{right:0}
+.drawer-head{display:flex; align-items:center; justify-content:space-between; padding:16px; border-bottom:1px solid var(--border)}
+.drawer-body{padding:0 0 16px 0; height:100%; overflow:auto}
+.drawer-mask{position:fixed; inset:0; background:#0008; opacity:0; pointer-events:none; transition:opacity .2s; z-index:50}
+.drawer-mask.show{opacity:1; pointer-events:auto}

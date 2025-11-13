@@ -1,0 +1,23 @@
+/* Kế thừa dex.css; chỉ thêm các nét riêng cho CEX */
+
+/* Tên sàn CEX: to + trắng */
+#cexTable .ex-name span{
+  font-size: 16.5px;   /* tăng từ 14px lên ~16.5px */
+  font-weight: 700;
+  color: #fff;         /* trắng */
+}
+
+/* giữ link là trắng, dễ đọc */
+#cexTable .ex-name{ color:#fff; text-decoration:none; }
+#cexTable .ex-name:hover span{ text-decoration:underline; }
+
+#cexTable .ex-name img{ width:20px; height:20px; border-radius:50%; border:1px solid var(--border) }
+
+.badge.trust{ padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700; }
+.badge.trust.ok  { background:#142316; color:#4ade80; border:1px solid #1f7a3d; }
+.badge.trust.mid { background:#262113; color:#facc15; border:1px solid #704c00; }
+.badge.trust.low { background:#2a1a1a; color:#f87171; border:1px solid #7a1f1f; }
+
+th[data-sort]{ cursor:pointer; user-select:none; }
+th[data-sort].asc::after  { content:" ▲"; color:var(--muted); }
+th[data-sort].desc::after { content:" ▼"; color:var(--muted); }
