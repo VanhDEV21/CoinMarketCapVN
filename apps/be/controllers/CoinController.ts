@@ -1,6 +1,8 @@
 import { CoinService } from '../services/coinServices';
+import coinRepo from '../repositories/CoinRepository';
 import {Request, Response} from 'express';
 import { getMarketsForSymbol } from "../services/marketService";
+import { tfToMinutes, isValidTimeframe } from '../utils/tsToMinutes';
 export class CoinController {
   private coinService: CoinService;
   constructor() {
@@ -39,29 +41,29 @@ export class CoinController {
       res.status(500).json({ error: 'Error fetching coin history' });
     }
   };
-    public getOHLC = async (req: Request, res: Response) => {
-      try {
-        const symbol = req.params.symbol;
-        const tf = (req.query.tf as string) || req.query.interval || '60';
-        let limit: number | undefined;
-        if (req.query.limit === undefined) {
-          limit = undefined;
-        } else {
-          const raw = String(req.query.limit).toLowerCase();
-          if (raw === 'all') limit = undefined;
-          else {
-            const n = Number(raw);
-            limit = Number.isFinite(n) && n > 0 ? n : undefined; // giá trị xấu => ALL
-          }
-        }
+ async  getOHLC(req: Request, res: Response) {
+  try {
+    const symbol = String(req.params.symbol || req.query.symbol || '');
+    if (!symbol) return res.status(400).json({ ok:false, message:'symbol required' });
 
-        const data = await this.coinService.getOHLCFromExistingData(symbol, tf as string, limit);
-        res.status(200).json(data);
-      } catch (error) {
-        console.error('Error fetching OHLC:', error);
-        res.status(500).json({ error: 'Error fetching OHLC data' });
-      }
-  };
+    // mặc định vẫn là 1h để giữ hành vi cũ
+    const tf = String(req.query.tf || '1h').toLowerCase();
+    if (!isValidTimeframe(tf)) return res.status(400).json({ ok:false, message:'invalid tf' });
+    const intervalMinutes = tfToMinutes(tf)!; // 5 | 10 | 15 | 30 | 60
+
+    // (tuỳ chọn) hỗ trợ limit nếu FE truyền, còn không thì undefined = full như cũ
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+
+    const candles = await coinRepo.aggregateOHLC(symbol, intervalMinutes, limit, undefined);
+
+    return res.json(candles.map(c => ({
+      t: c.t, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume
+    })));
+  } catch (e:any) {
+    console.error('getOHLC error:', e);
+    return res.status(500).json({ ok:false, message: e?.message || 'server error' });
+  }
+}
   async getMarkets(req: Request, res: Response) {
   try {
     const symbol = String(req.params.symbol || "");

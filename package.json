@@ -5,6 +5,8 @@
     "bcryptjs": "^3.0.2",
     "bottleneck": "^2.19.5",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "ethers": "^6.15.0",
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
     "ioredis": "^5.8.2",
@@ -30,7 +32,7 @@
     "build": "tsc",
     "start": "concurrently \"yarn be\" \"yarn fe\"",
     "be": "node dist/server.js",
-    "fe": "http-server . -p 8211"
+    "fe": "http-server . -p 8217"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",

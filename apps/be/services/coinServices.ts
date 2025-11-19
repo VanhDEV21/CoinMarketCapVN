@@ -2,9 +2,7 @@ import axios from 'axios';
 import { CoinRepository } from '../repositories/CoinRepository';
 import { ICoin } from '../interfaces/ICoin';
 import Coin from '../models/CoinModel';
-import { tfToMinutes } from '../utils/tsToMinutes';
-
-const API_KEY = '73feb218-7d95-459b-a40b-5f726d5c9c01';
+import { Env } from '../config/env';
 export class CoinService {
   private coinRepo: CoinRepository;
 
@@ -18,7 +16,7 @@ export class CoinService {
 
       const response = await axios.get('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest', {
         headers: {
-          'X-CMC_PRO_API_KEY': API_KEY,  
+          'X-CMC_PRO_API_KEY': Env.API_KEY,  
           'Accept': 'application/json',
         },
         params: {
@@ -117,10 +115,10 @@ export class CoinService {
     }));
   }
 
-  async getOHLCFromExistingData(symbol: string, tf: string | number = 60, limit : number) {
-    const minutes = tfToMinutes(tf);
-    return this.coinRepo.aggregateOHLC(symbol, minutes, limit);
-  }
+  // async getOHLCFromExistingData(symbol: string, tf: string | number = 60, limit : number) {
+  //   const minutes = tfToMinutes(tf);
+  //   return this.coinRepo.aggregateOHLC(symbol, minutes, limit);
+  // }
   
 }
 export async function getCoinDetails(symbol: string) {

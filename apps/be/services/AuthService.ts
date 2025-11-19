@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/UserModel';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
+import { Env } from '../config/env';
+const JWT_SECRET = Env.JWT_SECRET;
 const JWT_EXPIRES = '7d';
 
 export class AuthService {

@@ -32,7 +32,7 @@ export async function checkCoinChangesAndNotifyEmergency() {
 
     // 3) Lọc coin biến động "mạnh"
     const movers = latestCoins.filter(c =>
-      Number.isFinite(c.percentChange5min) && Math.abs(c.percentChange5min) >= 5
+          Number.isFinite(c.percentChange5min) && Math.abs(c.percentChange5min) >= 5
       || Number.isFinite(c.percentChange1h) && Math.abs(c.percentChange1h) >= 10
       || Number.isFinite(c.percentChange24h) && Math.abs(c.percentChange24h) >= 40
     );

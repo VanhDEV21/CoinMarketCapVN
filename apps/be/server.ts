@@ -1,4 +1,5 @@
 import express, { Application } from 'express';
+import { Env } from './config/env';
 import { connectToDatabase } from './config/ConnectDB';
 import coinRoutes from './routes/coinRoutes';
 import authRoutes from './routes/authRoute';
@@ -11,6 +12,7 @@ import cors from 'cors';
 import axios from 'axios';
 import { maybeAuth } from './middlewares/maybeAuth';
 import { checkCoinChangesAndNotifyEmergency } from './services/checkCoinChangesAndNotifyEmergency';
+import {checkHyperliquidWhaleDepositsAndNotify} from './services/HyperLiquidWhaleWatcher';
 import { startTelegramBot } from './bots/telegramBot';
 import { pruneOldByVersion } from './services/pruneByVersion';
 import cron from 'node-cron';
@@ -29,7 +31,7 @@ app.use('/api/ai', aiRoute);
 app.use("/api/exchanges", CEXRoutes);
 app.use('/api/dex', DEXRoutes);
 async function fetchAndStoreCoins() {
-  return axios.get('http://localhost:5000/api/coins/fetch-and-store')
+  return axios.get(`${Env.LOCALHOST}/api/coins/fetch-and-store`)
     .then(response => {
       console.log('API fetch-and-store success:', response.data);
     })
@@ -40,12 +42,12 @@ async function fetchAndStoreCoins() {
 
 async function getNotifications(){
   // TRẢ VỀ promise của axios
-  return axios.post('http://localhost:5000/api/notifications/send-notifications', {})
+  return axios.post(`${Env.LOCALHOST}/api/api/notifications/send-notifications`, {})
     .then(res => console.log('[watchlist] success:', res.status, res.data))
     .catch(err => console.error('[watchlist] FAILED', err?.response?.status, err?.response?.data || err?.message || err));
 }
 startTelegramBot();
-
+checkHyperliquidWhaleDepositsAndNotify();
 let isFetchRunning =  false;
 let isNotifRunning = false;
 
@@ -59,6 +61,7 @@ cron.schedule('*/5 * * * *', async () => {
   try {
     await fetchAndStoreCoins();
     await checkCoinChangesAndNotifyEmergency();
+    await checkHyperliquidWhaleDepositsAndNotify();
   } catch (e) {
     console.error('[CRON */5] error', e);
   } finally {
@@ -121,7 +124,7 @@ cron.schedule('3 12 * * *', async () => {
   }
 }, { timezone: 'Asia/Bangkok' });
 
-const PORT = process.env.PORT || 5000;
+const PORT = Env.PORT||5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

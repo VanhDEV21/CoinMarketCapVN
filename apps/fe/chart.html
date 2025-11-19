@@ -70,7 +70,17 @@
 </head>
 <body>
   <div id="topbar-root"></div>
-
+  <!-- Timeframe selector -->
+  <div class="tf-bar" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+    <label for="tf">Timeframe:</label>
+    <select id="tf" style="padding:6px 10px;">
+      <option value="5m">5m</option>
+      <option value="10m">10m</option>
+      <option value="15m">15m</option> <!-- NEW -->
+      <option value="30m">30m</option>
+      <option value="1h" selected>1h</option>
+    </select>
+  </div>
   <div class="main-container">
     <!-- Info left -->
     <div class="coin-info">
